@@ -1,7 +1,7 @@
-import * as sqlite3 from "sqlite3";
+import * as sqlite from "sqlite3";
 import * as util from "util";
 
-import { THINGS_DB_PATH } from "./contants";
+import { THINGS_DB_PATH } from "./constants";
 
 export interface SubTask {
   title: string;
@@ -25,9 +25,13 @@ export interface DateToTaskMap {
   [key: string]: TaskMap;
 }
 
-async function getTasksFromThingsDb(): Promise<Task[]> {
-  const thingsDb = new sqlite3.Database(THINGS_DB_PATH, sqlite3.OPEN_READONLY);
-  const daysToTasks: DateToTaskMap = {};
+// async function getTasksFromThingsDb(): Promise<Task[]> {
+async function getTasksFromThingsDb(): Promise<any> {
+  // const dbPath = (THINGS_DB_PATH.replace("~", os.homedir());
+  const dbPath = THINGS_DB_PATH.replace("~", "/Users/liam");
+  console.log("db", dbPath);
+
+  const thingsDb = new sqlite.Database(dbPath, sqlite.OPEN_READONLY);
 
   return util.promisify(thingsDb.each)(
     `

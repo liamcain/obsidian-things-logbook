@@ -1,15 +1,16 @@
 import type moment from "moment";
-import { Plugin } from "obsidian";
-import {
-  createDailyNote,
-  getDailyNote,
-  getAllDailyNotes,
-} from "obsidian-daily-notes-interface";
+import { App, Plugin } from "obsidian";
+// import {
+//   createDailyNote,
+//   getDailyNote,
+//   getAllDailyNotes,
+// } from "obsidian-daily-notes-interface";
 
-import { getTasksFromThingsLogbook, Task } from "src/things";
+import { getTasksFromThingsLogbook, Task } from "./things";
 
 declare global {
   interface Window {
+    app: App;
     moment: typeof moment;
   }
 }
@@ -23,60 +24,62 @@ export default class ThingsLogbookPlugin extends Plugin {
     });
   }
 
-  async syncLogbook() {
-    const dailyNotes = getAllDailyNotes();
-    const tasks = await getTasksFromThingsLogbook();
-    const daysToTasks: Record<string, Task[]> = {};
+  async syncLogbook(): Promise<void> {
+    // const dailyNotes = getAllDailyNotes();
+    const tasks: Task[] = await getTasksFromThingsLogbook();
+    // const daysToTasks: Record<string, Task[]> = {};
 
-    tasks.forEach((task: Task) => {
-      const stopDate = window.moment(task.stopDate * 1000);
+    console.log("tasks", tasks);
 
-      const key = stopDate.format();
+    // tasks.forEach((task: Task) => {
+    //   const stopDate = window.moment(task.stopDate * 1000);
 
-      if (daysToTasks[key]) {
-        daysToTasks[key].push(task);
-      } else {
-        daysToTasks[key] = [task];
-      }
-    });
+    //   const key = stopDate.format();
 
-    Object.entries(daysToTasks).forEach(async ([dateStr, tasks]) => {
-      const date = window.moment(dateStr);
+    //   if (daysToTasks[key]) {
+    //     daysToTasks[key].push(task);
+    //   } else {
+    //     daysToTasks[key] = [task];
+    //   }
+    // });
 
-      let dailyNote = getDailyNote(date, dailyNotes);
-      if (!dailyNote) {
-        dailyNote = await createDailyNote(date);
-      }
+    // Object.entries(daysToTasks).forEach(async ([dateStr, _tasks]) => {
+    //   const date = window.moment(dateStr);
 
-      const renderedTasks = "RENDERED_TASKS"; // TODO
+    //   let dailyNote = getDailyNote(date, dailyNotes);
+    //   if (!dailyNote) {
+    //     dailyNote = await createDailyNote(date);
+    //   }
 
-      const metadata = this.app.metadataCache.getFileCache(dailyNote);
+    //   const renderedTasks = "RENDERED_TASKS"; // TODO
 
-      const sectionIdx = metadata.headings.findIndex(
-        (meta) => meta.heading === "Logbook"
-      );
-      // TODO this should take into account level
+    //   const metadata = this.app.metadataCache.getFileCache(dailyNote);
 
-      const fileLines = (await this.app.vault.read(dailyNote)).split("\n");
+    //   const sectionIdx = metadata.headings.findIndex(
+    //     (meta) => meta.heading === "Logbook"
+    //   );
+    //   // TODO this should take into account level
 
-      // Section already exists, just replace
-      if (sectionIdx !== -1) {
-        const start = metadata.headings[sectionIdx].position.start;
-        const end = metadata.headings[sectionIdx].position.start;
+    //   const fileLines = (await this.app.vault.read(dailyNote)).split("\n");
 
-        const prefix = fileLines.slice(0, start.line);
-        const suffix = fileLines.slice(end.line);
+    //   // Section already exists, just replace
+    //   if (sectionIdx !== -1) {
+    //     const start = metadata.headings[sectionIdx].position.start;
+    //     const end = metadata.headings[sectionIdx].position.start;
 
-        this.app.vault.modify(
-          dailyNote,
-          [prefix, renderedTasks, suffix].join("\n")
-        );
-      } else {
-        this.app.vault.modify(
-          dailyNote,
-          [...fileLines, "\n", renderedTasks].join("\n")
-        );
-      }
-    });
+    //     const prefix = fileLines.slice(0, start.line);
+    //     const suffix = fileLines.slice(end.line);
+
+    //     this.app.vault.modify(
+    //       dailyNote,
+    //       [prefix, renderedTasks, suffix].join("\n")
+    //     );
+    //   } else {
+    //     this.app.vault.modify(
+    //       dailyNote,
+    //       [...fileLines, "\n", renderedTasks].join("\n")
+    //     );
+    //   }
+    // });
   }
 }

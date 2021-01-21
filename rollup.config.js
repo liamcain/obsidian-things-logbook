@@ -1,30 +1,31 @@
-import svelte from "rollup-plugin-svelte";
 import resolve from "@rollup/plugin-node-resolve";
+import json from "@rollup/plugin-json";
 import commonjs from "@rollup/plugin-commonjs";
+import replace from "@rollup/plugin-replace";
 import typescript from "@rollup/plugin-typescript";
-import autoPreprocess from "svelte-preprocess";
 import { env } from "process";
 
 export default {
-  input: "src/main.ts",
+  input: "src/index.ts",
   output: {
     format: "cjs",
-    file: "main.js",
-    exports: "default",
+    dir: "dist",
   },
   external: ["obsidian", "fs", "os", "path"],
   plugins: [
-    svelte({
-      emitCss: false,
-      preprocess: autoPreprocess(),
-    }),
+    json(),
     typescript({ sourceMap: env.env === "DEV" }),
     resolve({
       browser: true,
-      dedupe: ["svelte"],
     }),
-    commonjs({
-      include: "node_modules/**",
+    replace({
+      delimiters: ["", ""],
+      values: {
+        "require('readable-stream/transform')": "require('stream').Transform",
+        'require("readable-stream/transform")': 'require("stream").Transform',
+        "readable-stream": "stream",
+      },
     }),
+    commonjs(),
   ],
 };
