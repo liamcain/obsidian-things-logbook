@@ -1,12 +1,18 @@
 import type moment from "moment";
-import { App, Plugin } from "obsidian";
-// import {
-//   createDailyNote,
-//   getDailyNote,
-//   getAllDailyNotes,
-// } from "obsidian-daily-notes-interface";
+import { App, Notice, Plugin } from "obsidian";
+import {
+  createDailyNote,
+  getDailyNote,
+  getAllDailyNotes,
+} from "obsidian-daily-notes-interface";
+import {
+  defaultSettings,
+  ISettings,
+  ThingsLogbookSettingsTab,
+} from "./settings";
 
-import { getTasksFromThingsLogbook, Task } from "./things";
+import { getTasksFromThingsLogbook, SubTask, Task } from "./things";
+import { isMacOS, updateSection } from "./utils";
 
 declare global {
   interface Window {
@@ -15,71 +21,94 @@ declare global {
   }
 }
 
+function renderTask(task: Task): string {
+  return [
+    `- [x] ${task.title}`,
+    task.subtasks
+      .map((subtask: SubTask) => `  - [x] ${subtask.title}`)
+      .join("\n"),
+  ].join("\n");
+}
+
+function renderTasks(tasks: Task[]): string {
+  return `## Logbook
+${tasks.map(renderTask).join("\n")} 
+  `;
+}
+
 export default class ThingsLogbookPlugin extends Plugin {
+  public options: ISettings;
+
   async onload(): Promise<void> {
+    if (!isMacOS()) {
+      console.info(
+        "Failed to load Things Logbook plugin. Platform not supported"
+      );
+      return;
+    }
+
     this.addCommand({
-      id: "show-calendar-view",
-      name: "Open view",
-      callback: this.syncLogbook.bind(this),
+      id: "sync-things-logbook",
+      name: "Sync",
+      callback: () => setTimeout(this.syncLogbook, 0),
     });
+
+    await this.loadOptions();
+
+    this.addSettingTab(new ThingsLogbookSettingsTab(this.app, this));
   }
 
   async syncLogbook(): Promise<void> {
-    // const dailyNotes = getAllDailyNotes();
+    const dailyNotes = getAllDailyNotes();
     const tasks: Task[] = await getTasksFromThingsLogbook();
-    // const daysToTasks: Record<string, Task[]> = {};
+    const daysToTasks: Record<string, Task[]> = {};
 
-    console.log("tasks", tasks);
+    tasks
+      .filter((task) => task.stopDate)
+      .forEach((task: Task) => {
+        const stopDate = window.moment.unix(task.stopDate);
+        const key = stopDate.startOf("day").format();
 
-    // tasks.forEach((task: Task) => {
-    //   const stopDate = window.moment(task.stopDate * 1000);
+        if (daysToTasks[key]) {
+          daysToTasks[key].push(task);
+        } else {
+          daysToTasks[key] = [task];
+        }
+      });
 
-    //   const key = stopDate.format();
+    const jobPromises: Promise<void>[] = [];
+    Object.entries(daysToTasks).forEach(async ([dateStr, tasks]) => {
+      const date = window.moment(dateStr);
 
-    //   if (daysToTasks[key]) {
-    //     daysToTasks[key].push(task);
-    //   } else {
-    //     daysToTasks[key] = [task];
-    //   }
-    // });
+      let dailyNote = getDailyNote(date, dailyNotes);
+      if (!dailyNote) {
+        dailyNote = await createDailyNote(date);
+      }
 
-    // Object.entries(daysToTasks).forEach(async ([dateStr, _tasks]) => {
-    //   const date = window.moment(dateStr);
+      jobPromises.push(
+        updateSection(dailyNote, "## Logbook", renderTasks(tasks))
+      );
+    });
 
-    //   let dailyNote = getDailyNote(date, dailyNotes);
-    //   if (!dailyNote) {
-    //     dailyNote = await createDailyNote(date);
-    //   }
+    Promise.all(jobPromises).then(
+      () => new Notice("Things Logbook sync complete")
+    );
+  }
 
-    //   const renderedTasks = "RENDERED_TASKS"; // TODO
+  async loadOptions(): Promise<void> {
+    const options = await this.loadData();
+    this.options = Object.assign({}, defaultSettings, options);
+  }
 
-    //   const metadata = this.app.metadataCache.getFileCache(dailyNote);
+  async writeOptions(
+    changeOpts: (settings: ISettings) => Partial<ISettings>
+  ): Promise<void> {
+    const options = {
+      ...this.options,
+      ...changeOpts(this.options),
+    };
 
-    //   const sectionIdx = metadata.headings.findIndex(
-    //     (meta) => meta.heading === "Logbook"
-    //   );
-    //   // TODO this should take into account level
-
-    //   const fileLines = (await this.app.vault.read(dailyNote)).split("\n");
-
-    //   // Section already exists, just replace
-    //   if (sectionIdx !== -1) {
-    //     const start = metadata.headings[sectionIdx].position.start;
-    //     const end = metadata.headings[sectionIdx].position.start;
-
-    //     const prefix = fileLines.slice(0, start.line);
-    //     const suffix = fileLines.slice(end.line);
-
-    //     this.app.vault.modify(
-    //       dailyNote,
-    //       [prefix, renderedTasks, suffix].join("\n")
-    //     );
-    //   } else {
-    //     this.app.vault.modify(
-    //       dailyNote,
-    //       [...fileLines, "\n", renderedTasks].join("\n")
-    //     );
-    //   }
-    // });
+    this.options = options;
+    await this.saveData(options);
   }
 }
