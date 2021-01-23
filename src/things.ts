@@ -4,7 +4,10 @@ import Papa from "papaparse";
 
 import { THINGS_DB_PATH } from "./constants";
 
+export const TASK_FETCH_LIMIT = 100;
+
 export interface SubTask {
+  completed: boolean;
   title: string;
 }
 
@@ -25,15 +28,8 @@ export interface ITaskRecord {
   area: string;
   startDate: number;
   stopDate: number;
-  subtask: string;
-}
-
-export interface TaskMap {
-  [key: string]: Task;
-}
-
-export interface DateToTaskMap {
-  [key: string]: TaskMap;
+  subtaskTitle: string;
+  subtaskStopDate: number;
 }
 
 interface ISpawnResults {
@@ -42,12 +38,6 @@ interface ISpawnResults {
   code: number;
 }
 
-// type ISchemaType = "number" | "string";
-// interface ISchema {
-//   name: string;
-//   type: ISchemaType;
-// }
-
 function parseCSV(csv: Buffer[]): ITaskRecord[] {
   const lines = Buffer.concat(csv).toString("utf-8");
   return Papa.parse<ITaskRecord>(lines, {
@@ -55,21 +45,6 @@ function parseCSV(csv: Buffer[]): ITaskRecord[] {
     header: true,
     newline: "\n",
   }).data;
-  // return lines.map((line, idx) => {
-  //   const record: Record<string, unknown> = {};
-  //   const components = line.split("|");
-
-  //   for (let i = 0; i < headers.length; i++) {
-  //     const { name, type } = headers[i];
-  //     if (idx === 0) {
-  //       console.log("components", components, components.length);
-  //     }
-
-  //     record[name] =
-  //       type === "number" ? parseFloat(components[i]) : components[i];
-  //   }
-  //   return record as T;
-  // });
 }
 
 async function queryThingsDb(query: string): Promise<ISpawnResults> {
@@ -102,8 +77,7 @@ async function queryThingsDb(query: string): Promise<ISpawnResults> {
   });
 }
 
-async function getTasksFromThingsDb(): Promise<Task[]> {
-  const offset = 0;
+async function getTasksFromThingsDb(latestSyncTime: number): Promise<Task[]> {
   const { stdOut, stdErr } = await queryThingsDb(
     `SELECT
         TMTask.uuid as uuid,
@@ -111,21 +85,22 @@ async function getTasksFromThingsDb(): Promise<Task[]> {
         TMTask.notes as notes,
         TMTask.startDate as startDate,
         TMTask.stopDate as stopDate,
-        TMChecklistItem.title as subtask
-        TMArea.title as area,
+        TMChecklistItem.title as subtaskTitle,
+        TMChecklistItem.stopDate as subtaskStopDate,
+        TMArea.title as area
     FROM
         TMChecklistItem,
         TMTask
+    LEFT JOIN TMArea ON TMTask.area = TMArea.uuid
     WHERE
         TMTask.trashed = 0
         AND TMTask.stopDate IS NOT NULL
+        AND TMTask.stopDate > ${latestSyncTime}
         AND TMChecklistItem.title != ""
         AND TMTask.uuid = TMChecklistItem.task
-        AND TMTask.area = TMArea.uuid
     ORDER BY
         TMTask.stopDate
-    LIMIT 1000
-    OFFSET ${offset}
+    LIMIT ${TASK_FETCH_LIMIT}
         `
   );
 
@@ -134,35 +109,21 @@ async function getTasksFromThingsDb(): Promise<Task[]> {
     return Promise.reject(error);
   }
 
-  // const asNumber = (name: string) => ({ name, type: "number" as ISchemaType });
-  // const asString = (name: string) => ({ name, type: "string" as ISchemaType });
-  // const headers: ISchema[] = [
-  //   asString("uuid"),
-  //   asString("title"),
-  //   asString("notes"),
-  //   asString("project"),
-  //   asNumber("startDate"),
-  //   asNumber("stopDate"),
-  //   asString("subtask"),
-  // ];
-
   const taskRecords = parseCSV(stdOut);
 
-  console.log("raw records", taskRecords);
-
   const tasks: Record<string, Task> = {};
-  taskRecords.forEach(({ subtask, ...task }) => {
+  taskRecords.forEach(({ subtaskTitle, subtaskStopDate, ...task }) => {
     const id = task.uuid;
+    const subtask = {
+      completed: !!subtaskStopDate,
+      title: subtaskTitle,
+    };
     if (tasks[id]) {
-      tasks[id].subtasks.push({ title: subtask });
+      tasks[id].subtasks.push(subtask);
     } else {
       tasks[id] = {
         ...task,
-        subtasks: [
-          {
-            title: subtask,
-          },
-        ],
+        subtasks: [subtask],
       };
     }
   });
@@ -170,10 +131,12 @@ async function getTasksFromThingsDb(): Promise<Task[]> {
   return Object.values(tasks);
 }
 
-export async function getTasksFromThingsLogbook(): Promise<Task[]> {
+export async function getTasksFromThingsLogbook(
+  latestSyncTime: number
+): Promise<Task[]> {
   try {
-    const completedTasks = await getTasksFromThingsDb();
-    console.log("completedTasks", completedTasks);
+    console.debug("[Things Logbook] fetching from sqlite db...");
+    const completedTasks = await getTasksFromThingsDb(latestSyncTime);
     return completedTasks;
   } catch (err) {
     console.error("[Things Logbook] Failed to query the Things SQLite DB", err);

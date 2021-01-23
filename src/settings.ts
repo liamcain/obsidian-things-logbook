@@ -5,11 +5,13 @@ import type ThingsLogbookPlugin from "./index";
 const DEFAULT_SECTION_HEADING = "## Logbook";
 
 export interface ISettings {
+  latestSyncTime: number;
   sectionHeading: string;
 }
 
 export const defaultSettings = Object.freeze({
-  sectionheading: DEFAULT_SECTION_HEADING,
+  latestSyncTime: 0,
+  sectionHeading: DEFAULT_SECTION_HEADING,
 });
 
 export class ThingsLogbookSettingsTab extends PluginSettingTab {

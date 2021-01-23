@@ -1,9 +1,26 @@
 import * as os from "os";
 import type { TFile } from "obsidian";
 
-function getHeadingLevel(line: string): number | null {
-  const heading = line.match(/^(#){1:6} /);
-  return heading ? heading[0].length : null;
+export function getHeadingLevel(line: string): number | null {
+  const heading = line.match(/^(#{1,6})\s\b/);
+  return heading ? heading[1].length : null;
+}
+
+export function toHeading(title: string, level: number): string {
+  const hash = "".padStart(level, "#");
+  return `${hash} ${title}`;
+}
+
+export function groupBy<T>(
+  arr: T[],
+  predicate: (item: T) => string | number
+): Record<string | number, T[]> {
+  return arr.reduce((acc, elem) => {
+    const val = predicate(elem);
+    acc[val] = acc[val] || [];
+    acc[val].push(elem);
+    return acc;
+  }, {} as Record<string | number, T[]>);
 }
 
 export function isMacOS(): boolean {

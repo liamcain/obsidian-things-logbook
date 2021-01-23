@@ -11,8 +11,19 @@ import {
   ThingsLogbookSettingsTab,
 } from "./settings";
 
-import { getTasksFromThingsLogbook, SubTask, Task } from "./things";
-import { isMacOS, updateSection } from "./utils";
+import {
+  getTasksFromThingsLogbook,
+  SubTask,
+  Task,
+  TASK_FETCH_LIMIT,
+} from "./things";
+import {
+  getHeadingLevel,
+  groupBy,
+  isMacOS,
+  toHeading,
+  updateSection,
+} from "./utils";
 
 declare global {
   interface Window {
@@ -30,12 +41,6 @@ function renderTask(task: Task): string {
   ].join("\n");
 }
 
-function renderTasks(tasks: Task[]): string {
-  return `## Logbook
-${tasks.map(renderTask).join("\n")} 
-  `;
-}
-
 export default class ThingsLogbookPlugin extends Plugin {
   public options: ISettings;
 
@@ -46,6 +51,8 @@ export default class ThingsLogbookPlugin extends Plugin {
       );
       return;
     }
+
+    this.syncLogbook = this.syncLogbook.bind(this);
 
     this.addCommand({
       id: "sync-things-logbook",
@@ -60,39 +67,58 @@ export default class ThingsLogbookPlugin extends Plugin {
 
   async syncLogbook(): Promise<void> {
     const dailyNotes = getAllDailyNotes();
-    const tasks: Task[] = await getTasksFromThingsLogbook();
-    const daysToTasks: Record<string, Task[]> = {};
-
-    tasks
-      .filter((task) => task.stopDate)
-      .forEach((task: Task) => {
-        const stopDate = window.moment.unix(task.stopDate);
-        const key = stopDate.startOf("day").format();
-
-        if (daysToTasks[key]) {
-          daysToTasks[key].push(task);
-        } else {
-          daysToTasks[key] = [task];
-        }
-      });
-
     const jobPromises: Promise<void>[] = [];
-    Object.entries(daysToTasks).forEach(async ([dateStr, tasks]) => {
-      const date = window.moment(dateStr);
 
-      let dailyNote = getDailyNote(date, dailyNotes);
-      if (!dailyNote) {
-        dailyNote = await createDailyNote(date);
+    let latestSyncTime = this.options.latestSyncTime || 0;
+    let isSyncCompleted = false;
+
+    while (!isSyncCompleted) {
+      const tasks: Task[] = await getTasksFromThingsLogbook(latestSyncTime);
+
+      latestSyncTime = tasks[tasks.length - 1].stopDate;
+      if (tasks.length < TASK_FETCH_LIMIT) {
+        isSyncCompleted = true;
       }
 
-      jobPromises.push(
-        updateSection(dailyNote, "## Logbook", renderTasks(tasks))
+      const daysToTasks: Record<string, Task[]> = groupBy(
+        tasks.filter((task) => task.stopDate),
+        (task) => window.moment.unix(task.stopDate).startOf("day").format()
       );
+
+      Object.entries(daysToTasks).map(async ([dateStr, tasks]) => {
+        const date = window.moment(dateStr);
+
+        let dailyNote = getDailyNote(date, dailyNotes);
+        if (!dailyNote) {
+          dailyNote = await createDailyNote(date);
+        }
+
+        jobPromises.push(
+          updateSection(dailyNote, "## Logbook", this.renderTasks(tasks))
+        );
+      });
+    }
+
+    Promise.all(jobPromises).then(() => {
+      new Notice("Things Logbook sync complete");
+      this.writeOptions(() => ({ latestSyncTime }));
+    });
+  }
+
+  renderTasks(tasks: Task[]): string {
+    const { sectionHeading } = this.options;
+    const areas = groupBy<Task>(tasks, (task) => task.area || "");
+    const headingLevel = getHeadingLevel(sectionHeading);
+
+    const output = [sectionHeading];
+    Object.entries(areas).map(([area, tasks]) => {
+      if (area !== "") {
+        output.push(toHeading(area, headingLevel + 1));
+      }
+      output.push(...tasks.map(renderTask));
     });
 
-    Promise.all(jobPromises).then(
-      () => new Notice("Things Logbook sync complete")
-    );
+    return output.join("\n");
   }
 
   async loadOptions(): Promise<void> {
