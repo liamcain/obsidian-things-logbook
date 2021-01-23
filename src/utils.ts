@@ -1,7 +1,7 @@
 import * as os from "os";
 import type { TFile } from "obsidian";
 
-export function getHeadingLevel(line: string): number | null {
+export function getHeadingLevel(line = ""): number | null {
   const heading = line.match(/^(#{1,6})\s\b/);
   return heading ? heading[1].length : null;
 }

@@ -4,7 +4,7 @@ import Papa from "papaparse";
 
 import { THINGS_DB_PATH } from "./constants";
 
-export const TASK_FETCH_LIMIT = 100;
+export const TASK_FETCH_LIMIT = 1000;
 
 export interface SubTask {
   completed: boolean;
@@ -77,7 +77,30 @@ async function queryThingsDb(query: string): Promise<ISpawnResults> {
   });
 }
 
-async function getTasksFromThingsDb(latestSyncTime: number): Promise<Task[]> {
+function reformatTaskRecords(taskRecords: ITaskRecord[]): Task[] {
+  const tasks: Record<string, Task> = {};
+  taskRecords.forEach(({ subtaskTitle, subtaskStopDate, ...task }) => {
+    const id = task.uuid;
+    const subtask = {
+      completed: !!subtaskStopDate,
+      title: subtaskTitle,
+    };
+    if (tasks[id]) {
+      tasks[id].subtasks.push(subtask);
+    } else {
+      tasks[id] = {
+        ...task,
+        subtasks: [subtask],
+      };
+    }
+  });
+
+  return Object.values(tasks);
+}
+
+async function getTasksFromThingsDb(
+  latestSyncTime: number
+): Promise<ITaskRecord[]> {
   const { stdOut, stdErr } = await queryThingsDb(
     `SELECT
         TMTask.uuid as uuid,
@@ -109,36 +132,32 @@ async function getTasksFromThingsDb(latestSyncTime: number): Promise<Task[]> {
     return Promise.reject(error);
   }
 
-  const taskRecords = parseCSV(stdOut);
-
-  const tasks: Record<string, Task> = {};
-  taskRecords.forEach(({ subtaskTitle, subtaskStopDate, ...task }) => {
-    const id = task.uuid;
-    const subtask = {
-      completed: !!subtaskStopDate,
-      title: subtaskTitle,
-    };
-    if (tasks[id]) {
-      tasks[id].subtasks.push(subtask);
-    } else {
-      tasks[id] = {
-        ...task,
-        subtasks: [subtask],
-      };
-    }
-  });
-
-  return Object.values(tasks);
+  return parseCSV(stdOut);
 }
 
 export async function getTasksFromThingsLogbook(
   latestSyncTime: number
 ): Promise<Task[]> {
+  const completedTasks: Task[] = [];
+  let isSyncCompleted = false;
+  let stopTime = latestSyncTime;
+
   try {
-    console.debug("[Things Logbook] fetching from sqlite db...");
-    const completedTasks = await getTasksFromThingsDb(latestSyncTime);
-    return completedTasks;
+    while (!isSyncCompleted) {
+      console.debug("[Things Logbook] fetching from sqlite db...");
+      const taskRecords = await getTasksFromThingsDb(stopTime);
+      const tasks = reformatTaskRecords(taskRecords);
+      completedTasks.push(...tasks);
+
+      if (taskRecords.length < TASK_FETCH_LIMIT) {
+        isSyncCompleted = true;
+      }
+      // Use last task's stopTime to update the fetch window
+      stopTime = tasks.filter((t) => t?.stopDate).last()?.stopDate;
+    }
   } catch (err) {
     console.error("[Things Logbook] Failed to query the Things SQLite DB", err);
   }
+
+  return completedTasks;
 }
