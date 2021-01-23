@@ -12,7 +12,7 @@ export interface Task {
   uuid: string;
   title: string;
   notes: string;
-  project: string;
+  area: string;
   startDate: number;
   stopDate: number;
   subtasks: SubTask[];
@@ -22,7 +22,7 @@ export interface ITaskRecord {
   uuid: string;
   title: string;
   notes: string;
-  project: string;
+  area: string;
   startDate: number;
   stopDate: number;
   subtask: string;
@@ -109,18 +109,19 @@ async function getTasksFromThingsDb(): Promise<Task[]> {
         TMTask.uuid as uuid,
         TMTask.title as title,
         TMTask.notes as notes,
-        TMTask.project as project,
         TMTask.startDate as startDate,
         TMTask.stopDate as stopDate,
         TMChecklistItem.title as subtask
+        TMArea.title as area,
     FROM
         TMChecklistItem,
         TMTask
     WHERE
         TMTask.trashed = 0
         AND TMTask.stopDate IS NOT NULL
-        AND TMTask.uuid = TMChecklistItem.task
         AND TMChecklistItem.title != ""
+        AND TMTask.uuid = TMChecklistItem.task
+        AND TMTask.area = TMArea.uuid
     ORDER BY
         TMTask.stopDate
     LIMIT 1000
