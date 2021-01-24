@@ -8,9 +8,7 @@ import {
 
 import { createConfirmationDialog } from "./modal";
 import {
-  defaultSettings,
-  DEFAULT_SECTION_HEADING,
-  DEFAULT_TAG_PREFIX,
+  DEFAULT_SETTINGS,
   ISettings,
   ThingsLogbookSettingsTab,
 } from "./settings";
@@ -116,33 +114,30 @@ export default class ThingsLogbookPlugin extends Plugin {
       (task) => window.moment.unix(task.stopDate).startOf("day").format()
     );
 
-    const jobPromises: Promise<void>[] = Object.entries(daysToTasks).map(
-      async ([dateStr, tasks]) => {
-        const date = window.moment(dateStr);
+    Object.entries(daysToTasks).map(async ([dateStr, tasks]) => {
+      const date = window.moment(dateStr);
 
-        let dailyNote = getDailyNote(date, dailyNotes);
-        if (!dailyNote) {
-          dailyNote = await createDailyNote(date);
-        }
-        return updateSection(dailyNote, "## Logbook", this.renderTasks(tasks));
+      let dailyNote = getDailyNote(date, dailyNotes);
+      if (!dailyNote) {
+        dailyNote = await createDailyNote(date);
       }
-    );
 
-    Promise.all(jobPromises).then(() => {
-      new Notice("Things Logbook sync complete");
-      this.writeOptions(() => ({
-        hasAcceptedDisclaimer: true,
-        latestSyncTime: window.moment().unix(),
-      }));
-      this.scheduleNextSync();
+      await updateSection(dailyNote, "## Logbook", this.renderTasks(tasks));
     });
+
+    new Notice("Things Logbook sync complete");
+    this.writeOptions(() => ({
+      hasAcceptedDisclaimer: true,
+      latestSyncTime: window.moment().unix(),
+    }));
+    this.scheduleNextSync();
   }
 
   renderTask(task: ITask): string {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const vault = this.app.vault as any;
     const tab = getTab(vault.getConfig("useTab"), vault.getConfig("tabSize"));
-    const prefix = this.options.tagPrefix ?? DEFAULT_TAG_PREFIX;
+    const prefix = this.options.tagPrefix;
 
     const tags = task.tags
       .filter((tag) => !!tag)
@@ -167,7 +162,7 @@ export default class ThingsLogbookPlugin extends Plugin {
   }
 
   renderTasks(tasks: ITask[]): string {
-    const { sectionHeading = DEFAULT_SECTION_HEADING } = this.options;
+    const { sectionHeading } = this.options;
     const areas = groupBy<ITask>(tasks, (task) => task.area || "");
     const headingLevel = getHeadingLevel(sectionHeading);
 
@@ -190,27 +185,29 @@ export default class ThingsLogbookPlugin extends Plugin {
 
   scheduleNextSync(): void {
     const now = window.moment().unix();
-    const options = { ...defaultSettings, ...this.options };
-    const { isSyncEnabled, latestSyncTime, syncInterval } = options;
 
-    if (!isSyncEnabled) {
+    this.cancelScheduledSync();
+    if (!this.options.isSyncEnabled || !this.options.syncInterval) {
       return;
     }
 
+    const { latestSyncTime, syncInterval } = this.options;
     const syncIntervalMs = syncInterval * 1000;
     const nextSync = Math.max(latestSyncTime + syncIntervalMs - now, 20);
+
+    console.debug(`[Things Logbook] next sync scheduled in ${nextSync}ms`);
     this.syncTimeoutId = window.setTimeout(this.tryToSyncLogbook, nextSync);
   }
 
   async loadOptions(): Promise<void> {
-    this.options = (await this.loadData()) || {};
+    this.options = Object.assign({}, DEFAULT_SETTINGS, await this.loadData());
   }
 
   async writeOptions(
     changeOpts: (settings: ISettings) => Partial<ISettings>
   ): Promise<void> {
     const diff = changeOpts(this.options);
-    this.options = { ...this.options, ...diff };
+    this.options = Object.assign(this.options, diff);
 
     // reschedule if interval changed
     if (diff.syncInterval !== undefined && this.options.isSyncEnabled) {

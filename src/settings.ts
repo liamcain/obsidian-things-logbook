@@ -16,7 +16,7 @@ export interface ISettings {
   tagPrefix: string;
 }
 
-export const defaultSettings = Object.freeze({
+export const DEFAULT_SETTINGS = Object.freeze({
   hasAcceptedDisclaimer: false,
   latestSyncTime: 0,
 
@@ -57,11 +57,10 @@ export class ThingsLogbookSettingsTab extends PluginSettingTab {
         "Markdown heading to use when adding the logbook to a daily note"
       )
       .addText((textfield) => {
-        textfield.setPlaceholder(String(DEFAULT_SECTION_HEADING));
         textfield.setValue(this.plugin.options.sectionHeading);
         textfield.onChange(async (value) => {
           this.plugin.writeOptions(() => ({
-            sectionHeading: value !== "" ? value : undefined,
+            sectionHeading: value,
           }));
         });
       });
@@ -86,12 +85,14 @@ export class ThingsLogbookSettingsTab extends PluginSettingTab {
       .setName("Sync Frequency")
       .setDesc("Number of seconds the plugin will wait before syncing again")
       .addText((textfield) => {
-        textfield.setPlaceholder(String(DEFAULT_SYNC_FREQUENCY_SECONDS));
         textfield.inputEl.type = "number";
+        textfield.inputEl.onblur = () => {
+          textfield.setValue(String(this.plugin.options.syncInterval));
+        };
         textfield.setValue(String(this.plugin.options.syncInterval));
         textfield.onChange(async (value) => {
           this.plugin.writeOptions(() => ({
-            syncInterval: value !== "" ? Number(value) : undefined,
+            syncInterval: Number(value) || 0,
           }));
         });
       });
@@ -104,11 +105,10 @@ export class ThingsLogbookSettingsTab extends PluginSettingTab {
         "Prefix added to Things tags when imported into Obsidian (e.g. #logbook/work)"
       )
       .addText((textfield) => {
-        textfield.setPlaceholder(String(DEFAULT_TAG_PREFIX));
         textfield.setValue(this.plugin.options.tagPrefix);
         textfield.onChange(async (value) => {
           this.plugin.writeOptions(() => ({
-            tagPrefix: value !== "" ? value : undefined,
+            tagPrefix: value,
           }));
         });
       });
