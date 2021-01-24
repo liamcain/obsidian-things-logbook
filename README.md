@@ -4,7 +4,7 @@ This plugin for [Obsidian](https://obsidian.md/) will periodically sync your [Th
 
 ## Why?
 
-Anecdotally, I love using Things for task management. But I also want Obsidian daily notes to be a wholistic view of my day-to-day. This plugin dumps completed tasks from Things into daily notes, meaning I can keep my same workflow, and my Second Brain has a new data source.
+Anecdotally, I love using Things for task management. But I also want Obsidian daily notes to be a holistic view of my day-to-day. This plugin dumps completed tasks from Things into my daily notes, meaning I can keep my same workflow, and my Second Brain has a new data source.
 
 ## Usage
 
