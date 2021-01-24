@@ -122,7 +122,11 @@ export default class ThingsLogbookPlugin extends Plugin {
 
     return [
       `- [x] ${task.title} ${tags}`.trimEnd(),
-      task.notes && `${tab}- ${task.notes}`.trimEnd(),
+      ...(task.notes || "")
+        .trimEnd()
+        .split("\n")
+        .filter((line) => !!line)
+        .map((noteLine) => `${tab}- ${noteLine}`),
       ...task.subtasks.map(
         (subtask: ISubTask) =>
           `${tab}- [${subtask.completed ? "x" : " "}] ${subtask.title}`
@@ -154,7 +158,7 @@ export default class ThingsLogbookPlugin extends Plugin {
     const options = { ...defaultSettings, ...this.options };
     const { latestSyncTime, syncInterval } = options;
     const syncIntervalMs = syncInterval * 1000;
-    const nextSync = Math.max(latestSyncTime + syncIntervalMs - now, 0);
+    const nextSync = Math.max(latestSyncTime + syncIntervalMs - now, 10);
 
     if (this.syncTimeoutId !== undefined) {
       window.clearTimeout(this.syncTimeoutId);
