@@ -6,30 +6,38 @@ import { THINGS_DB_PATH } from "./constants";
 
 export const TASK_FETCH_LIMIT = 1000;
 
-export interface SubTask {
+export interface ISubTask {
   completed: boolean;
   title: string;
 }
 
-export interface Task {
+export interface ITask {
   uuid: string;
   title: string;
   notes: string;
-  area: string;
+  area?: string;
+  tags: string[];
   startDate: number;
   stopDate: number;
-  subtasks: SubTask[];
+  subtasks: ISubTask[];
 }
 
 export interface ITaskRecord {
   uuid: string;
   title: string;
   notes: string;
-  area: string;
+  area?: string;
   startDate: number;
   stopDate: number;
-  subtaskTitle: string;
-  subtaskStopDate: number;
+  tag?: string;
+}
+
+export interface IChecklistItemRecord {
+  uuid: string;
+  taskId: string;
+  title: string;
+  startDate: number;
+  stopDate: number;
 }
 
 interface ISpawnResults {
@@ -38,9 +46,9 @@ interface ISpawnResults {
   code: number;
 }
 
-function parseCSV(csv: Buffer[]): ITaskRecord[] {
+function parseCSV<T>(csv: Buffer[]): T[] {
   const lines = Buffer.concat(csv).toString("utf-8");
-  return Papa.parse<ITaskRecord>(lines, {
+  return Papa.parse<T>(lines, {
     dynamicTyping: true,
     header: true,
     newline: "\n",
@@ -77,21 +85,34 @@ async function queryThingsDb(query: string): Promise<ISpawnResults> {
   });
 }
 
-function reformatTaskRecords(taskRecords: ITaskRecord[]): Task[] {
-  const tasks: Record<string, Task> = {};
-  taskRecords.forEach(({ subtaskTitle, subtaskStopDate, ...task }) => {
+export function buildTasksFromSQLRecords(
+  taskRecords: ITaskRecord[],
+  checklistRecords: IChecklistItemRecord[]
+): ITask[] {
+  const tasks: Record<string, ITask> = {};
+  taskRecords.forEach(({ tag, ...task }) => {
     const id = task.uuid;
-    const subtask = {
-      completed: !!subtaskStopDate,
-      title: subtaskTitle,
-    };
     if (tasks[id]) {
-      tasks[id].subtasks.push(subtask);
+      tasks[id].tags.push(tag);
     } else {
       tasks[id] = {
         ...task,
-        subtasks: [subtask],
+        subtasks: [],
+        tags: [tag],
       };
+    }
+  });
+
+  checklistRecords.forEach(({ taskId, title, stopDate }) => {
+    const task = tasks[taskId];
+    const subtask = {
+      completed: !!stopDate,
+      title,
+    };
+    if (task.subtasks) {
+      task.subtasks.push(subtask);
+    } else {
+      task.subtasks = [subtask];
     }
   });
 
@@ -108,19 +129,20 @@ async function getTasksFromThingsDb(
         TMTask.notes as notes,
         TMTask.startDate as startDate,
         TMTask.stopDate as stopDate,
-        TMChecklistItem.title as subtaskTitle,
-        TMChecklistItem.stopDate as subtaskStopDate,
-        TMArea.title as area
+        TMArea.title as area,
+        TMTag.title as tag
     FROM
-        TMChecklistItem,
         TMTask
-    LEFT JOIN TMArea ON TMTask.area = TMArea.uuid
+    LEFT JOIN TMTaskTag
+        ON TMTaskTag.tasks = TMTask.uuid
+    LEFT JOIN TMTag
+        ON TMTag.uuid = TMTaskTag.tags
+    LEFT JOIN TMArea 
+        ON TMTask.area = TMArea.uuid
     WHERE
         TMTask.trashed = 0
         AND TMTask.stopDate IS NOT NULL
         AND TMTask.stopDate > ${latestSyncTime}
-        AND TMChecklistItem.title != ""
-        AND TMTask.uuid = TMChecklistItem.task
     ORDER BY
         TMTask.stopDate
     LIMIT ${TASK_FETCH_LIMIT}
@@ -135,29 +157,80 @@ async function getTasksFromThingsDb(
   return parseCSV(stdOut);
 }
 
+async function getChecklistItemsThingsDb(
+  latestSyncTime: number
+): Promise<IChecklistItemRecord[]> {
+  const { stdOut, stdErr } = await queryThingsDb(
+    `SELECT
+        task as taskId,
+        title as title,
+        stopDate as stopDate
+    FROM
+        TMChecklistItem
+    WHERE
+        stopDate > ${latestSyncTime}
+    ORDER BY
+        stopDate
+    LIMIT ${TASK_FETCH_LIMIT}
+        `
+  );
+
+  if (stdErr.length) {
+    const error = Buffer.concat(stdErr).toString("utf-8");
+    return Promise.reject(error);
+  }
+
+  return parseCSV(stdOut);
+}
+
 export async function getTasksFromThingsLogbook(
   latestSyncTime: number
-): Promise<Task[]> {
-  const completedTasks: Task[] = [];
+): Promise<ITaskRecord[]> {
+  const taskRecords: ITaskRecord[] = [];
   let isSyncCompleted = false;
   let stopTime = latestSyncTime;
 
   try {
     while (!isSyncCompleted) {
-      console.debug("[Things Logbook] fetching from sqlite db...");
-      const taskRecords = await getTasksFromThingsDb(stopTime);
-      const tasks = reformatTaskRecords(taskRecords);
-      completedTasks.push(...tasks);
+      console.debug("[Things Logbook] fetching tasks from sqlite db...");
 
-      if (taskRecords.length < TASK_FETCH_LIMIT) {
-        isSyncCompleted = true;
-      }
-      // Use last task's stopTime to update the fetch window
-      stopTime = tasks.filter((t) => t?.stopDate).last()?.stopDate;
+      const batch = await getTasksFromThingsDb(stopTime);
+
+      isSyncCompleted = batch.length < TASK_FETCH_LIMIT;
+      stopTime = batch.filter((t) => t.stopDate).last()?.stopDate;
+
+      taskRecords.push(...batch);
     }
   } catch (err) {
     console.error("[Things Logbook] Failed to query the Things SQLite DB", err);
   }
 
-  return completedTasks;
+  return taskRecords;
+}
+
+export async function getChecklistItemsFromThingsLogbook(
+  latestSyncTime: number
+): Promise<IChecklistItemRecord[]> {
+  const checklistItems: IChecklistItemRecord[] = [];
+  let isSyncCompleted = false;
+  let stopTime = latestSyncTime;
+
+  try {
+    while (!isSyncCompleted) {
+      console.debug(
+        "[Things Logbook] fetching checklist items from sqlite db..."
+      );
+
+      const batch = await getChecklistItemsThingsDb(stopTime);
+
+      isSyncCompleted = batch.length < TASK_FETCH_LIMIT;
+      stopTime = batch.filter((t) => t.stopDate).last()?.stopDate;
+
+      checklistItems.push(...batch);
+    }
+  } catch (err) {
+    console.error("[Things Logbook] Failed to query the Things SQLite DB", err);
+  }
+
+  return checklistItems;
 }

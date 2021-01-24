@@ -64,6 +64,6 @@ export async function updateSection(
       [...prefix, sectionContents, ...suffix].join("\n")
     );
   } else {
-    return vault.modify(file, [...fileLines, "\n", sectionContents].join("\n"));
+    return vault.modify(file, [...fileLines, "", sectionContents].join("\n"));
   }
 }

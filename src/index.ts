@@ -8,11 +8,18 @@ import {
 import {
   defaultSettings,
   DEFAULT_SECTION_HEADING,
+  DEFAULT_TAG_PREFIX,
   ISettings,
   ThingsLogbookSettingsTab,
 } from "./settings";
 
-import { getTasksFromThingsLogbook, SubTask, Task } from "./things";
+import {
+  buildTasksFromSQLRecords,
+  getChecklistItemsFromThingsLogbook,
+  getTasksFromThingsLogbook,
+  ISubTask,
+  ITask,
+} from "./things";
 import {
   getHeadingLevel,
   groupBy,
@@ -26,15 +33,6 @@ declare global {
     app: App;
     moment: typeof moment;
   }
-}
-
-function renderTask(task: Task): string {
-  return [
-    `- [x] ${task.title}`,
-    task.subtasks
-      .map((subtask: SubTask) => `  - [x] ${subtask.title}`)
-      .join("\n"),
-  ].join("\n");
 }
 
 export default class ThingsLogbookPlugin extends Plugin {
@@ -51,6 +49,7 @@ export default class ThingsLogbookPlugin extends Plugin {
 
     this.scheduleNextSync = this.scheduleNextSync.bind(this);
     this.syncLogbook = this.syncLogbook.bind(this);
+    this.renderTask = this.renderTask.bind(this);
 
     this.addCommand({
       id: "sync-things-logbook",
@@ -74,9 +73,17 @@ export default class ThingsLogbookPlugin extends Plugin {
   async syncLogbook(): Promise<void> {
     const dailyNotes = getAllDailyNotes();
     const latestSyncTime = this.options.latestSyncTime || 0;
-    const tasks = await getTasksFromThingsLogbook(latestSyncTime);
+    const taskRecords = await getTasksFromThingsLogbook(latestSyncTime);
+    const checklistRecords = await getChecklistItemsFromThingsLogbook(
+      latestSyncTime
+    );
 
-    const daysToTasks: Record<string, Task[]> = groupBy(
+    const tasks: ITask[] = buildTasksFromSQLRecords(
+      taskRecords,
+      checklistRecords
+    );
+
+    const daysToTasks: Record<string, ITask[]> = groupBy(
       tasks.filter((task) => task.stopDate),
       (task) => window.moment.unix(task.stopDate).startOf("day").format()
     );
@@ -100,9 +107,25 @@ export default class ThingsLogbookPlugin extends Plugin {
     });
   }
 
-  renderTasks(tasks: Task[]): string {
+  renderTask(task: ITask): string {
+    const prefix = this.options.tagPrefix ?? DEFAULT_TAG_PREFIX;
+    const tags = task.tags
+      .filter((tag) => !!tag)
+      .map((tag) => `#${prefix}${tag}`)
+      .join(" ");
+
+    return [
+      `- [x] ${task.title} ${tags}`.trimEnd(),
+      ...task.subtasks.map(
+        (subtask: ISubTask) =>
+          `  - [${subtask.completed ? "x" : " "}] ${subtask.title}`
+      ),
+    ].join("\n");
+  }
+
+  renderTasks(tasks: ITask[]): string {
     const { sectionHeading = DEFAULT_SECTION_HEADING } = this.options;
-    const areas = groupBy<Task>(tasks, (task) => task.area || "");
+    const areas = groupBy<ITask>(tasks, (task) => task.area || "");
     const headingLevel = getHeadingLevel(sectionHeading);
 
     const output = [sectionHeading];
@@ -110,7 +133,7 @@ export default class ThingsLogbookPlugin extends Plugin {
       if (area !== "") {
         output.push(toHeading(area, headingLevel + 1));
       }
-      output.push(...tasks.map(renderTask));
+      output.push(...tasks.map(this.renderTask));
     });
 
     return output.join("\n");
