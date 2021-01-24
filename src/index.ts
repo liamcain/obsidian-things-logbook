@@ -6,7 +6,7 @@ import {
   getAllDailyNotes,
 } from "obsidian-daily-notes-interface";
 
-import { ConfirmationModal, createConfirmationDialog } from "./modal";
+import { createConfirmationDialog } from "./modal";
 import {
   defaultSettings,
   DEFAULT_SECTION_HEADING,
@@ -41,7 +41,6 @@ declare global {
 export default class ThingsLogbookPlugin extends Plugin {
   public options: ISettings;
   private syncTimeoutId: number;
-  private modal: ConfirmationModal;
 
   async onload(): Promise<void> {
     if (!isMacOS()) {

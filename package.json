@@ -1,6 +1,6 @@
 {
   "name": "obsidian-things-logbook-plugin",
-  "version": "0.0.1",
+  "version": "0.1.0",
   "description": "Sync Things.app Logbook with Obsidian",
   "author": "liamcain",
   "main": "main.js",
