@@ -11,6 +11,13 @@ export function toHeading(title: string, level: number): string {
   return `${hash} ${title}`;
 }
 
+export function getTab(useTab: boolean, tabSize: number): string {
+  if (useTab) {
+    return "\t";
+  }
+  return "".padStart(tabSize, " ");
+}
+
 export function groupBy<T>(
   arr: T[],
   predicate: (item: T) => string | number

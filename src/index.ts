@@ -22,6 +22,7 @@ import {
 } from "./things";
 import {
   getHeadingLevel,
+  getTab,
   groupBy,
   isMacOS,
   toHeading,
@@ -108,19 +109,27 @@ export default class ThingsLogbookPlugin extends Plugin {
   }
 
   renderTask(task: ITask): string {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const vault = this.app.vault as any;
+    const tab = getTab(vault.getConfig("useTab"), vault.getConfig("tabSize"));
     const prefix = this.options.tagPrefix ?? DEFAULT_TAG_PREFIX;
+
     const tags = task.tags
       .filter((tag) => !!tag)
+      .map((tag) => tag.replace(/\s+/g, "-").toLowerCase())
       .map((tag) => `#${prefix}${tag}`)
       .join(" ");
 
     return [
       `- [x] ${task.title} ${tags}`.trimEnd(),
+      task.notes && `${tab}- ${task.notes}`.trimEnd(),
       ...task.subtasks.map(
         (subtask: ISubTask) =>
-          `  - [${subtask.completed ? "x" : " "}] ${subtask.title}`
+          `${tab}- [${subtask.completed ? "x" : " "}] ${subtask.title}`
       ),
-    ].join("\n");
+    ]
+      .filter((line) => !!line)
+      .join("\n");
   }
 
   renderTasks(tasks: ITask[]): string {
