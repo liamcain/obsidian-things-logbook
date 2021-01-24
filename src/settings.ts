@@ -7,6 +7,7 @@ export const DEFAULT_SYNC_FREQUENCY_SECONDS = 30 * 60; // Every 30 minutes
 export const DEFAULT_TAG_PREFIX = "logbook/";
 
 export interface ISettings {
+  isSyncEnabled: boolean;
   latestSyncTime: number;
   sectionHeading: string;
   syncInterval: number;
@@ -14,6 +15,7 @@ export interface ISettings {
 }
 
 export const defaultSettings = Object.freeze({
+  isSyncEnabled: false,
   latestSyncTime: 0,
   syncInterval: DEFAULT_SYNC_FREQUENCY_SECONDS,
   sectionHeading: DEFAULT_SECTION_HEADING,
@@ -31,9 +33,17 @@ export class ThingsLogbookSettingsTab extends PluginSettingTab {
   display(): void {
     this.containerEl.empty();
 
+    this.containerEl.createEl("h3", {
+      text: "Format Settings",
+    });
     this.addSectionHeadingSetting();
-    this.addSyncIntervalSetting();
     this.addTagPrefixSetting();
+
+    this.containerEl.createEl("h3", {
+      text: "Sync",
+    });
+    this.addSyncEnabledSetting();
+    this.addSyncIntervalSetting();
   }
 
   addSectionHeadingSetting(): void {
@@ -50,6 +60,20 @@ export class ThingsLogbookSettingsTab extends PluginSettingTab {
           this.plugin.writeOptions(() => ({
             sectionHeading: value !== "" ? value : undefined,
           }));
+        });
+      });
+  }
+
+  addSyncEnabledSetting(): void {
+    new Setting(this.containerEl)
+      .setName("Enable periodic syncing")
+      .addToggle((toggle) => {
+        toggle.setValue(this.plugin.options.isSyncEnabled);
+        toggle.onChange(async (value) => {
+          this.plugin.writeOptions(() => ({
+            isSyncEnabled: value,
+          }));
+          this.display();
         });
       });
   }
@@ -73,7 +97,9 @@ export class ThingsLogbookSettingsTab extends PluginSettingTab {
   addTagPrefixSetting(): void {
     new Setting(this.containerEl)
       .setName("Tag Prefix")
-      .setDesc("Number of seconds the plugin will wait before syncing again")
+      .setDesc(
+        "Prefix added to Things tags when imported into Obsidian (e.g. #logbook/work)"
+      )
       .addText((textfield) => {
         textfield.setPlaceholder(String(DEFAULT_TAG_PREFIX));
         textfield.setValue(this.plugin.options.tagPrefix);

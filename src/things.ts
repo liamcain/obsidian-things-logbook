@@ -41,6 +41,8 @@ export interface IChecklistItemRecord {
 
 const thingsSqlitePath = THINGS_DB_PATH.replace("~", os.homedir());
 
+export class ThingsSQLiteSyncError extends Error {}
+
 export function buildTasksFromSQLRecords(
   taskRecords: ITaskRecord[],
   checklistRecords: IChecklistItemRecord[]
@@ -147,6 +149,7 @@ export async function getTasksFromThingsLogbook(
     }
   } catch (err) {
     console.error("[Things Logbook] Failed to query the Things SQLite DB", err);
+    throw new ThingsSQLiteSyncError("fetch Tasks failed");
   }
 
   return taskRecords;
@@ -174,6 +177,7 @@ export async function getChecklistItemsFromThingsLogbook(
     }
   } catch (err) {
     console.error("[Things Logbook] Failed to query the Things SQLite DB", err);
+    throw new ThingsSQLiteSyncError("fetch Subtasks failed");
   }
 
   return checklistItems;

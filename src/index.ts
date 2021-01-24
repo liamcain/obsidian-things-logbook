@@ -55,29 +55,39 @@ export default class ThingsLogbookPlugin extends Plugin {
     this.addCommand({
       id: "sync-things-logbook",
       name: "Sync",
-      callback: () => setTimeout(this.syncLogbook, 10),
+      callback: () => setTimeout(this.syncLogbook, 20),
     });
 
     await this.loadOptions();
 
     this.addSettingTab(new ThingsLogbookSettingsTab(this.app, this));
 
-    if (this.app.workspace.layoutReady) {
-      this.scheduleNextSync();
-    } else {
-      this.registerEvent(
-        this.app.workspace.on("layout-ready", this.scheduleNextSync)
-      );
+    if (this.options.isSyncEnabled) {
+      if (this.app.workspace.layoutReady) {
+        this.scheduleNextSync();
+      } else {
+        this.registerEvent(
+          this.app.workspace.on("layout-ready", this.scheduleNextSync)
+        );
+      }
     }
   }
 
   async syncLogbook(): Promise<void> {
     const dailyNotes = getAllDailyNotes();
     const latestSyncTime = this.options.latestSyncTime || 0;
-    const taskRecords = await getTasksFromThingsLogbook(latestSyncTime);
-    const checklistRecords = await getChecklistItemsFromThingsLogbook(
-      latestSyncTime
-    );
+
+    let taskRecords = [];
+    let checklistRecords = [];
+    try {
+      taskRecords = await getTasksFromThingsLogbook(latestSyncTime);
+      checklistRecords = await getChecklistItemsFromThingsLogbook(
+        latestSyncTime
+      );
+    } catch (err) {
+      new Notice("Things Logbook sync failed");
+      return;
+    }
 
     const tasks: ITask[] = buildTasksFromSQLRecords(
       taskRecords,
@@ -152,17 +162,23 @@ export default class ThingsLogbookPlugin extends Plugin {
     return output.join("\n");
   }
 
-  scheduleNextSync(): void {
-    const now = window.moment().unix();
-
-    const options = { ...defaultSettings, ...this.options };
-    const { latestSyncTime, syncInterval } = options;
-    const syncIntervalMs = syncInterval * 1000;
-    const nextSync = Math.max(latestSyncTime + syncIntervalMs - now, 10);
-
+  cancelScheduledSync(): void {
     if (this.syncTimeoutId !== undefined) {
       window.clearTimeout(this.syncTimeoutId);
     }
+  }
+
+  scheduleNextSync(): void {
+    const now = window.moment().unix();
+    const options = { ...defaultSettings, ...this.options };
+    const { isSyncEnabled, latestSyncTime, syncInterval } = options;
+
+    if (!isSyncEnabled) {
+      return;
+    }
+
+    const syncIntervalMs = syncInterval * 1000;
+    const nextSync = Math.max(latestSyncTime + syncIntervalMs - now, 20);
     this.syncTimeoutId = window.setTimeout(this.syncLogbook, nextSync);
   }
 
@@ -174,13 +190,22 @@ export default class ThingsLogbookPlugin extends Plugin {
     changeOpts: (settings: ISettings) => Partial<ISettings>
   ): Promise<void> {
     const diff = changeOpts(this.options);
+    this.options = { ...this.options, ...diff };
 
-    if (diff.syncInterval !== undefined) {
+    if (diff.syncInterval !== undefined && this.options.isSyncEnabled) {
       // reschedule if interval changed
       this.scheduleNextSync();
     }
 
-    this.options = { ...this.options, ...diff };
+    if (diff.isSyncEnabled !== undefined) {
+      // Sync toggled on/off
+      if (diff.isSyncEnabled) {
+        this.scheduleNextSync();
+      } else {
+        this.cancelScheduledSync();
+      }
+    }
+
     await this.saveData(this.options);
   }
 }
