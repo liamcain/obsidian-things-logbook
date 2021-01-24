@@ -14,6 +14,8 @@ It also displays any subtasks, tags, or areas associated to the tasks.
 
 It will refetch the tasks at a designated interval.
 
+<img width="452" alt="image" src="https://user-images.githubusercontent.com/693981/105621501-144e6a80-5dd6-11eb-9462-4f7ba342afbc.png">
+
 ## Settings
 
 | Setting         | Description                                                                                      |
