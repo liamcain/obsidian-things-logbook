@@ -146,6 +146,9 @@ export async function getTasksFromThingsLogbook(
       stopTime = batch.filter((t) => t.stopDate).last()?.stopDate;
 
       taskRecords.push(...batch);
+      console.debug(
+        `[Things Logbook] fetched ${batch.length} tasks from sqlite db`
+      );
     }
   } catch (err) {
     console.error("[Things Logbook] Failed to query the Things SQLite DB", err);
@@ -174,6 +177,9 @@ export async function getChecklistItemsFromThingsLogbook(
       stopTime = batch.filter((t) => t.stopDate).last()?.stopDate;
 
       checklistItems.push(...batch);
+      console.debug(
+        `[Things Logbook] fetched ${batch.length} checklist items from sqlite db`
+      );
     }
   } catch (err) {
     console.error("[Things Logbook] Failed to query the Things SQLite DB", err);

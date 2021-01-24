@@ -16,7 +16,7 @@ export interface ISettings {
   tagPrefix: string;
 }
 
-export const defaultSettings = Object.freeze({
+export const DEFAULT_SETTINGS = Object.freeze({
   hasAcceptedDisclaimer: false,
   latestSyncTime: 0,
 
