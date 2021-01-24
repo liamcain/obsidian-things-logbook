@@ -6,7 +6,7 @@ This plugin for [Obsidian](https://obsidian.md/) will periodically sync your [Th
 
 Anecdotally, I love using Things for task management. But I also want Obsidian daily notes to be a holistic view of my day-to-day. This plugin dumps completed tasks from Things into my daily notes, meaning I can keep my same workflow, and my Second Brain has a new data source.
 
-## Disclaimer
+## Disclaimer 🚨
 
 The initial sync will backfill your entire Things Logbook into Obsidian. This potentially means creating/modifying hundreds of files. I recommend testing this plugin out in a new vault first to make sure you're happy with the result.
 

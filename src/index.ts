@@ -5,6 +5,8 @@ import {
   getDailyNote,
   getAllDailyNotes,
 } from "obsidian-daily-notes-interface";
+
+import { ConfirmationModal, createConfirmationDialog } from "./modal";
 import {
   defaultSettings,
   DEFAULT_SECTION_HEADING,
@@ -39,6 +41,7 @@ declare global {
 export default class ThingsLogbookPlugin extends Plugin {
   public options: ISettings;
   private syncTimeoutId: number;
+  private modal: ConfirmationModal;
 
   async onload(): Promise<void> {
     if (!isMacOS()) {
@@ -50,19 +53,20 @@ export default class ThingsLogbookPlugin extends Plugin {
 
     this.scheduleNextSync = this.scheduleNextSync.bind(this);
     this.syncLogbook = this.syncLogbook.bind(this);
+    this.tryToSyncLogbook = this.tryToSyncLogbook.bind(this);
     this.renderTask = this.renderTask.bind(this);
 
     this.addCommand({
       id: "sync-things-logbook",
       name: "Sync",
-      callback: () => setTimeout(this.syncLogbook, 20),
+      callback: () => setTimeout(this.tryToSyncLogbook, 20),
     });
 
     await this.loadOptions();
 
     this.addSettingTab(new ThingsLogbookSettingsTab(this.app, this));
 
-    if (this.options.isSyncEnabled) {
+    if (this.options.hasAcceptedDisclaimer && this.options.isSyncEnabled) {
       if (this.app.workspace.layoutReady) {
         this.scheduleNextSync();
       } else {
@@ -70,6 +74,20 @@ export default class ThingsLogbookPlugin extends Plugin {
           this.app.workspace.on("layout-ready", this.scheduleNextSync)
         );
       }
+    }
+  }
+
+  async tryToSyncLogbook(): Promise<void> {
+    if (this.options.hasAcceptedDisclaimer) {
+      this.syncLogbook();
+    } else {
+      createConfirmationDialog({
+        cta: "Sync",
+        onAccept: this.syncLogbook,
+        text:
+          "Enabling sync will backfill your entire Things Logbook into Obsidian. This means potentially creating or modifying hundreds of notes. Make sure to test the plugin in a test vault before continuing.",
+        title: "Sync Now?",
+      });
     }
   }
 
@@ -113,7 +131,10 @@ export default class ThingsLogbookPlugin extends Plugin {
 
     Promise.all(jobPromises).then(() => {
       new Notice("Things Logbook sync complete");
-      this.writeOptions(() => ({ latestSyncTime: window.moment().unix() }));
+      this.writeOptions(() => ({
+        hasAcceptedDisclaimer: true,
+        latestSyncTime: window.moment().unix(),
+      }));
       this.scheduleNextSync();
     });
   }
@@ -179,7 +200,7 @@ export default class ThingsLogbookPlugin extends Plugin {
 
     const syncIntervalMs = syncInterval * 1000;
     const nextSync = Math.max(latestSyncTime + syncIntervalMs - now, 20);
-    this.syncTimeoutId = window.setTimeout(this.syncLogbook, nextSync);
+    this.syncTimeoutId = window.setTimeout(this.tryToSyncLogbook, nextSync);
   }
 
   async loadOptions(): Promise<void> {
@@ -190,15 +211,16 @@ export default class ThingsLogbookPlugin extends Plugin {
     changeOpts: (settings: ISettings) => Partial<ISettings>
   ): Promise<void> {
     const diff = changeOpts(this.options);
-    this.options = { ...this.options, ...diff };
+    const options = { ...this.options, ...diff };
+    this.options = { ...options };
 
+    // reschedule if interval changed
     if (diff.syncInterval !== undefined && this.options.isSyncEnabled) {
-      // reschedule if interval changed
       this.scheduleNextSync();
     }
 
+    // Sync toggled on/off
     if (diff.isSyncEnabled !== undefined) {
-      // Sync toggled on/off
       if (diff.isSyncEnabled) {
         this.scheduleNextSync();
       } else {
@@ -206,6 +228,12 @@ export default class ThingsLogbookPlugin extends Plugin {
       }
     }
 
-    await this.saveData(this.options);
+    // Periodic sync shouldn't be left enabled while user hasn't
+    // accepted the disclaimer. This means options !== this.options
+    if (options.isSyncEnabled && !options.hasAcceptedDisclaimer) {
+      options.isSyncEnabled = false;
+    }
+
+    await this.saveData(options);
   }
 }

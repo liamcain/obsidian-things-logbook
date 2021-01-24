@@ -7,16 +7,20 @@ export const DEFAULT_SYNC_FREQUENCY_SECONDS = 30 * 60; // Every 30 minutes
 export const DEFAULT_TAG_PREFIX = "logbook/";
 
 export interface ISettings {
-  isSyncEnabled: boolean;
+  hasAcceptedDisclaimer: boolean;
   latestSyncTime: number;
+
+  isSyncEnabled: boolean;
   sectionHeading: string;
   syncInterval: number;
   tagPrefix: string;
 }
 
 export const defaultSettings = Object.freeze({
-  isSyncEnabled: false,
+  hasAcceptedDisclaimer: false,
   latestSyncTime: 0,
+
+  isSyncEnabled: false,
   syncInterval: DEFAULT_SYNC_FREQUENCY_SECONDS,
   sectionHeading: DEFAULT_SECTION_HEADING,
   tagPrefix: DEFAULT_TAG_PREFIX,
@@ -54,8 +58,7 @@ export class ThingsLogbookSettingsTab extends PluginSettingTab {
       )
       .addText((textfield) => {
         textfield.setPlaceholder(String(DEFAULT_SECTION_HEADING));
-        textfield.inputEl.type = "number";
-        textfield.setValue(String(this.plugin.options.sectionHeading));
+        textfield.setValue(this.plugin.options.sectionHeading);
         textfield.onChange(async (value) => {
           this.plugin.writeOptions(() => ({
             sectionHeading: value !== "" ? value : undefined,
