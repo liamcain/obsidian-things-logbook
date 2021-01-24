@@ -211,8 +211,7 @@ export default class ThingsLogbookPlugin extends Plugin {
     changeOpts: (settings: ISettings) => Partial<ISettings>
   ): Promise<void> {
     const diff = changeOpts(this.options);
-    const options = { ...this.options, ...diff };
-    this.options = { ...options };
+    this.options = { ...this.options, ...diff };
 
     // reschedule if interval changed
     if (diff.syncInterval !== undefined && this.options.isSyncEnabled) {
@@ -228,12 +227,12 @@ export default class ThingsLogbookPlugin extends Plugin {
       }
     }
 
-    // Periodic sync shouldn't be left enabled while user hasn't
-    // accepted the disclaimer. This means options !== this.options
-    if (options.isSyncEnabled && !options.hasAcceptedDisclaimer) {
-      options.isSyncEnabled = false;
-    }
-
-    await this.saveData(options);
+    await this.saveData({
+      ...this.options,
+      // Periodic sync shouldn't be left enabled if
+      // the user hasn't accepted the disclaimer.
+      isSyncEnabled:
+        this.options.isSyncEnabled && !this.options.hasAcceptedDisclaimer,
+    });
   }
 }
