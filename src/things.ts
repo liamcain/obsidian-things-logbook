@@ -1,8 +1,7 @@
 import * as os from "os";
-import { spawn } from "child_process";
-import Papa from "papaparse";
 
 import { THINGS_DB_PATH } from "./constants";
+import { querySqliteDB } from "./sqlite";
 
 export const TASK_FETCH_LIMIT = 1000;
 
@@ -40,50 +39,7 @@ export interface IChecklistItemRecord {
   stopDate: number;
 }
 
-interface ISpawnResults {
-  stdOut: Buffer[];
-  stdErr: Buffer[];
-  code: number;
-}
-
-function parseCSV<T>(csv: Buffer[]): T[] {
-  const lines = Buffer.concat(csv).toString("utf-8");
-  return Papa.parse<T>(lines, {
-    dynamicTyping: true,
-    header: true,
-    newline: "\n",
-  }).data;
-}
-
-async function queryThingsDb(query: string): Promise<ISpawnResults> {
-  const dbPath = THINGS_DB_PATH.replace("~", os.homedir());
-
-  return new Promise((done) => {
-    const stdOut: Buffer[] = [];
-    const stdErr: Buffer[] = [];
-
-    const spawned = spawn("sqlite3", [
-      dbPath,
-      "-header",
-      "-csv",
-      "-readonly",
-      query,
-    ]);
-
-    spawned.stdout.on("data", (buffer: Buffer) => {
-      stdOut.push(buffer);
-    });
-    spawned.stderr.on("data", (buffer: Buffer) => {
-      stdErr.push(buffer);
-    });
-
-    spawned.on("error", (err: Error) => {
-      stdErr.push(Buffer.from(String(err.stack), "ascii"));
-    });
-    spawned.on("close", (code: number) => done({ stdErr, stdOut, code }));
-    spawned.on("exit", (code: number) => done({ stdErr, stdOut, code }));
-  });
-}
+const thingsSqlitePath = THINGS_DB_PATH.replace("~", os.homedir());
 
 export function buildTasksFromSQLRecords(
   taskRecords: ITaskRecord[],
@@ -122,7 +78,8 @@ export function buildTasksFromSQLRecords(
 async function getTasksFromThingsDb(
   latestSyncTime: number
 ): Promise<ITaskRecord[]> {
-  const { stdOut, stdErr } = await queryThingsDb(
+  return querySqliteDB<ITaskRecord>(
+    thingsSqlitePath,
     `SELECT
         TMTask.uuid as uuid,
         TMTask.title as title,
@@ -148,19 +105,13 @@ async function getTasksFromThingsDb(
     LIMIT ${TASK_FETCH_LIMIT}
         `
   );
-
-  if (stdErr.length) {
-    const error = Buffer.concat(stdErr).toString("utf-8");
-    return Promise.reject(error);
-  }
-
-  return parseCSV(stdOut);
 }
 
 async function getChecklistItemsThingsDb(
   latestSyncTime: number
 ): Promise<IChecklistItemRecord[]> {
-  const { stdOut, stdErr } = await queryThingsDb(
+  return querySqliteDB<IChecklistItemRecord>(
+    thingsSqlitePath,
     `SELECT
         task as taskId,
         title as title,
@@ -174,13 +125,6 @@ async function getChecklistItemsThingsDb(
     LIMIT ${TASK_FETCH_LIMIT}
         `
   );
-
-  if (stdErr.length) {
-    const error = Buffer.concat(stdErr).toString("utf-8");
-    return Promise.reject(error);
-  }
-
-  return parseCSV(stdOut);
 }
 
 export async function getTasksFromThingsLogbook(
