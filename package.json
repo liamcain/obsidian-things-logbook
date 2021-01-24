@@ -13,7 +13,6 @@
   },
   "dependencies": {
     "obsidian": "obsidianmd/obsidian-api#master",
-    "obsidian-calendar-ui": "0.2.3",
     "obsidian-daily-notes-interface": "0.5.1",
     "papaparse": "5.3.0",
     "tslib": "2.0.3"
