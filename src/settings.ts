@@ -80,14 +80,13 @@ export class ThingsLogbookSettingsTab extends PluginSettingTab {
       .setName("Sync Frequency")
       .setDesc("Number of seconds the plugin will wait before syncing again")
       .addText((textfield) => {
-        textfield.inputEl.type = "number";
-        textfield.inputEl.onblur = () => {
-          textfield.setValue(String(this.plugin.options.syncInterval));
-        };
         textfield.setValue(String(this.plugin.options.syncInterval));
-        textfield.onChange(async (val) => {
-          this.plugin.writeOptions({ syncInterval: Number(val) || 0 });
-        });
+        textfield.inputEl.type = "number";
+        textfield.inputEl.onblur = (e: FocusEvent) => {
+          const syncInterval = Number((<HTMLInputElement>e.target).value);
+          textfield.setValue(String(syncInterval));
+          this.plugin.writeOptions({ syncInterval });
+        };
       });
   }
 
