@@ -7,6 +7,7 @@ import {
 } from "obsidian-daily-notes-interface";
 
 import { createConfirmationDialog } from "./modal";
+import { LogbookRenderer } from "./renderer";
 import {
   DEFAULT_SETTINGS,
   ISettings,
@@ -17,17 +18,9 @@ import {
   buildTasksFromSQLRecords,
   getChecklistItemsFromThingsLogbook,
   getTasksFromThingsLogbook,
-  ISubTask,
   ITask,
 } from "./things";
-import {
-  getHeadingLevel,
-  getTab,
-  groupBy,
-  isMacOS,
-  toHeading,
-  updateSection,
-} from "./utils";
+import { groupBy, isMacOS, updateSection } from "./utils";
 
 declare global {
   interface Window {
@@ -52,7 +45,7 @@ export default class ThingsLogbookPlugin extends Plugin {
     this.scheduleNextSync = this.scheduleNextSync.bind(this);
     this.syncLogbook = this.syncLogbook.bind(this);
     this.tryToScheduleSync = this.tryToScheduleSync.bind(this);
-    this.renderTask = this.renderTask.bind(this);
+    this.tryToSyncLogbook = this.tryToSyncLogbook.bind(this);
 
     this.addCommand({
       id: "sync-things-logbook",
@@ -83,9 +76,7 @@ export default class ThingsLogbookPlugin extends Plugin {
       createConfirmationDialog({
         cta: "Sync",
         onAccept: async () => {
-          await this.writeOptions(() => ({
-            hasAcceptedDisclaimer: true,
-          }));
+          await this.writeOptions({ hasAcceptedDisclaimer: true });
           this.syncLogbook();
         },
         text:
@@ -102,15 +93,11 @@ export default class ThingsLogbookPlugin extends Plugin {
       createConfirmationDialog({
         cta: "Sync",
         onAccept: async () => {
-          await this.writeOptions(() => ({
-            hasAcceptedDisclaimer: true,
-          }));
+          await this.writeOptions({ hasAcceptedDisclaimer: true });
           this.scheduleNextSync();
         },
         onCancel: async () => {
-          await this.writeOptions(() => ({
-            isSyncEnabled: false,
-          }));
+          await this.writeOptions({ isSyncEnabled: false });
           // update the settings tab display
           this.settingsTab.display();
         },
@@ -122,6 +109,7 @@ export default class ThingsLogbookPlugin extends Plugin {
   }
 
   async syncLogbook(): Promise<void> {
+    const logbookRenderer = new LogbookRenderer(this.app, this.options);
     const dailyNotes = getAllDailyNotes();
     const latestSyncTime = this.options.latestSyncTime || 0;
 
@@ -155,59 +143,16 @@ export default class ThingsLogbookPlugin extends Plugin {
         dailyNote = await createDailyNote(date);
       }
 
-      await updateSection(dailyNote, "## Logbook", this.renderTasks(tasks));
+      await updateSection(
+        dailyNote,
+        "## Logbook",
+        logbookRenderer.render(tasks)
+      );
     });
 
     new Notice("Things Logbook sync complete");
-    this.writeOptions(() => ({
-      hasAcceptedDisclaimer: true,
-      latestSyncTime: window.moment().unix(),
-    }));
+    this.writeOptions({ latestSyncTime: window.moment().unix() });
     this.scheduleNextSync();
-  }
-
-  renderTask(task: ITask): string {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const vault = this.app.vault as any;
-    const tab = getTab(vault.getConfig("useTab"), vault.getConfig("tabSize"));
-    const prefix = this.options.tagPrefix;
-
-    const tags = task.tags
-      .filter((tag) => !!tag)
-      .map((tag) => tag.replace(/\s+/g, "-").toLowerCase())
-      .map((tag) => `#${prefix}${tag}`)
-      .join(" ");
-
-    return [
-      `- [x] ${task.title} ${tags}`.trimEnd(),
-      ...(task.notes || "")
-        .trimEnd()
-        .split("\n")
-        .filter((line) => !!line)
-        .map((noteLine) => `${tab}- ${noteLine}`),
-      ...task.subtasks.map(
-        (subtask: ISubTask) =>
-          `${tab}- [${subtask.completed ? "x" : " "}] ${subtask.title}`
-      ),
-    ]
-      .filter((line) => !!line)
-      .join("\n");
-  }
-
-  renderTasks(tasks: ITask[]): string {
-    const { sectionHeading } = this.options;
-    const areas = groupBy<ITask>(tasks, (task) => task.area || "");
-    const headingLevel = getHeadingLevel(sectionHeading);
-
-    const output = [sectionHeading];
-    Object.entries(areas).map(([area, tasks]) => {
-      if (area !== "") {
-        output.push(toHeading(area, headingLevel + 1));
-      }
-      output.push(...tasks.map(this.renderTask));
-    });
-
-    return output.join("\n");
   }
 
   cancelScheduledSync(): void {
@@ -242,10 +187,7 @@ export default class ThingsLogbookPlugin extends Plugin {
     }
   }
 
-  async writeOptions(
-    changeOpts: (settings: ISettings) => Partial<ISettings>
-  ): Promise<void> {
-    const diff = changeOpts(this.options);
+  async writeOptions(diff: Partial<ISettings>): Promise<void> {
     this.options = Object.assign(this.options, diff);
 
     // Sync toggled on/off

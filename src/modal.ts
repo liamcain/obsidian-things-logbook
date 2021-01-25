@@ -40,7 +40,7 @@ export class ConfirmationModal extends Modal {
 
   onClose(): void {
     if (!this.accepted) {
-      this.config?.onCancel();
+      this.config.onCancel?.();
     }
   }
 }

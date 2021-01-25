@@ -58,10 +58,8 @@ export class ThingsLogbookSettingsTab extends PluginSettingTab {
       )
       .addText((textfield) => {
         textfield.setValue(this.plugin.options.sectionHeading);
-        textfield.onChange(async (value) => {
-          this.plugin.writeOptions(() => ({
-            sectionHeading: value,
-          }));
+        textfield.onChange(async (sectionHeading) => {
+          this.plugin.writeOptions({ sectionHeading });
         });
       });
   }
@@ -71,10 +69,8 @@ export class ThingsLogbookSettingsTab extends PluginSettingTab {
       .setName("Enable periodic syncing")
       .addToggle((toggle) => {
         toggle.setValue(this.plugin.options.isSyncEnabled);
-        toggle.onChange(async (value) => {
-          this.plugin.writeOptions(() => ({
-            isSyncEnabled: value,
-          }));
+        toggle.onChange(async (isSyncEnabled) => {
+          this.plugin.writeOptions({ isSyncEnabled });
         });
       });
   }
@@ -89,10 +85,8 @@ export class ThingsLogbookSettingsTab extends PluginSettingTab {
           textfield.setValue(String(this.plugin.options.syncInterval));
         };
         textfield.setValue(String(this.plugin.options.syncInterval));
-        textfield.onChange(async (value) => {
-          this.plugin.writeOptions(() => ({
-            syncInterval: Number(value) || 0,
-          }));
+        textfield.onChange(async (val) => {
+          this.plugin.writeOptions({ syncInterval: Number(val) || 0 });
         });
       });
   }
@@ -105,10 +99,8 @@ export class ThingsLogbookSettingsTab extends PluginSettingTab {
       )
       .addText((textfield) => {
         textfield.setValue(this.plugin.options.tagPrefix);
-        textfield.onChange(async (value) => {
-          this.plugin.writeOptions(() => ({
-            tagPrefix: value,
-          }));
+        textfield.onChange(async (tagPrefix) => {
+          this.plugin.writeOptions({ tagPrefix });
         });
       });
   }
