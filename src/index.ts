@@ -135,7 +135,7 @@ export default class ThingsLogbookPlugin extends Plugin {
       (task) => window.moment.unix(task.stopDate).startOf("day").format()
     );
 
-    Object.entries(daysToTasks).map(async ([dateStr, tasks]) => {
+    for (const [dateStr, tasks] of Object.entries(daysToTasks)) {
       const date = window.moment(dateStr);
 
       let dailyNote = getDailyNote(date, dailyNotes);
@@ -148,7 +148,7 @@ export default class ThingsLogbookPlugin extends Plugin {
         "## Logbook",
         logbookRenderer.render(tasks)
       );
-    });
+    }
 
     new Notice("Things Logbook sync complete");
     this.writeOptions({ latestSyncTime: window.moment().unix() });
