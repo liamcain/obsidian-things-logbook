@@ -75,7 +75,6 @@ export class ThingsLogbookSettingsTab extends PluginSettingTab {
           this.plugin.writeOptions(() => ({
             isSyncEnabled: value,
           }));
-          this.display();
         });
       });
   }

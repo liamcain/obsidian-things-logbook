@@ -39,6 +39,7 @@ declare global {
 export default class ThingsLogbookPlugin extends Plugin {
   public options: ISettings;
   private syncTimeoutId: number;
+  private settingsTab: ThingsLogbookSettingsTab;
 
   async onload(): Promise<void> {
     if (!isMacOS()) {
@@ -50,7 +51,7 @@ export default class ThingsLogbookPlugin extends Plugin {
 
     this.scheduleNextSync = this.scheduleNextSync.bind(this);
     this.syncLogbook = this.syncLogbook.bind(this);
-    this.tryToSyncLogbook = this.tryToSyncLogbook.bind(this);
+    this.tryToScheduleSync = this.tryToScheduleSync.bind(this);
     this.renderTask = this.renderTask.bind(this);
 
     this.addCommand({
@@ -61,7 +62,8 @@ export default class ThingsLogbookPlugin extends Plugin {
 
     await this.loadOptions();
 
-    this.addSettingTab(new ThingsLogbookSettingsTab(this.app, this));
+    this.settingsTab = new ThingsLogbookSettingsTab(this.app, this);
+    this.addSettingTab(this.settingsTab);
 
     if (this.options.hasAcceptedDisclaimer && this.options.isSyncEnabled) {
       if (this.app.workspace.layoutReady) {
@@ -80,7 +82,38 @@ export default class ThingsLogbookPlugin extends Plugin {
     } else {
       createConfirmationDialog({
         cta: "Sync",
-        onAccept: this.syncLogbook,
+        onAccept: async () => {
+          await this.writeOptions(() => ({
+            hasAcceptedDisclaimer: true,
+          }));
+          this.syncLogbook();
+        },
+        text:
+          "Enabling sync will backfill your entire Things Logbook into Obsidian. This means potentially creating or modifying hundreds of notes. Make sure to test the plugin in a test vault before continuing.",
+        title: "Sync Now?",
+      });
+    }
+  }
+
+  async tryToScheduleSync(): Promise<void> {
+    if (this.options.hasAcceptedDisclaimer) {
+      this.scheduleNextSync();
+    } else {
+      createConfirmationDialog({
+        cta: "Sync",
+        onAccept: async () => {
+          await this.writeOptions(() => ({
+            hasAcceptedDisclaimer: true,
+          }));
+          this.scheduleNextSync();
+        },
+        onCancel: async () => {
+          await this.writeOptions(() => ({
+            isSyncEnabled: false,
+          }));
+          // update the settings tab display
+          this.settingsTab.display();
+        },
         text:
           "Enabling sync will backfill your entire Things Logbook into Obsidian. This means potentially creating or modifying hundreds of notes. Make sure to test the plugin in a test vault before continuing.",
         title: "Sync Now?",
@@ -188,6 +221,7 @@ export default class ThingsLogbookPlugin extends Plugin {
 
     this.cancelScheduledSync();
     if (!this.options.isSyncEnabled || !this.options.syncInterval) {
+      console.debug("[Things Logbook] scheduling skipped, no syncInterval set");
       return;
     }
 
@@ -196,11 +230,16 @@ export default class ThingsLogbookPlugin extends Plugin {
     const nextSync = Math.max(latestSyncTime + syncIntervalMs - now, 20);
 
     console.debug(`[Things Logbook] next sync scheduled in ${nextSync}ms`);
-    this.syncTimeoutId = window.setTimeout(this.tryToSyncLogbook, nextSync);
+    this.syncTimeoutId = window.setTimeout(this.syncLogbook, nextSync);
   }
 
   async loadOptions(): Promise<void> {
     this.options = Object.assign({}, DEFAULT_SETTINGS, await this.loadData());
+    if (!this.options.hasAcceptedDisclaimer) {
+      // In case the user quits before accepting sync modal,
+      // this keep the settings in sync
+      this.options.isSyncEnabled = false;
+    }
   }
 
   async writeOptions(
@@ -209,26 +248,18 @@ export default class ThingsLogbookPlugin extends Plugin {
     const diff = changeOpts(this.options);
     this.options = Object.assign(this.options, diff);
 
-    // reschedule if interval changed
-    if (diff.syncInterval !== undefined && this.options.isSyncEnabled) {
-      this.scheduleNextSync();
-    }
-
     // Sync toggled on/off
     if (diff.isSyncEnabled !== undefined) {
       if (diff.isSyncEnabled) {
-        this.scheduleNextSync();
+        this.tryToScheduleSync();
       } else {
         this.cancelScheduledSync();
       }
+    } else if (diff.syncInterval !== undefined && this.options.isSyncEnabled) {
+      // reschedule if interval changed
+      this.tryToScheduleSync();
     }
 
-    await this.saveData({
-      ...this.options,
-      // Periodic sync shouldn't be left enabled if
-      // the user hasn't accepted the disclaimer.
-      isSyncEnabled:
-        this.options.isSyncEnabled && !this.options.hasAcceptedDisclaimer,
-    });
+    await this.saveData(this.options);
   }
 }
