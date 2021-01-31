@@ -67,10 +67,14 @@ export function buildTasksFromSQLRecords(
       completed: !!stopDate,
       title,
     };
-    if (task.subtasks) {
-      task.subtasks.push(subtask);
-    } else {
-      task.subtasks = [subtask];
+
+    // checklist item might be completed before task
+    if (task) {
+      if (task.subtasks) {
+        task.subtasks.push(subtask);
+      } else {
+        task.subtasks = [subtask];
+      }
     }
   });
 
