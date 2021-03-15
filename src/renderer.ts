@@ -1,7 +1,7 @@
 import { App } from "obsidian";
 import { ISettings } from "./settings";
 import { ISubTask, ITask } from "./things";
-import { getHeadingLevel, getTab, groupBy, toHeading } from "./utils";
+import { getHeadingLevel, getTab, groupBy, toHeading } from "./textUtils";
 
 export class LogbookRenderer {
   private app: App;
