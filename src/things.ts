@@ -138,7 +138,7 @@ export async function getTasksFromThingsLogbook(
 ): Promise<ITaskRecord[]> {
   const taskRecords: ITaskRecord[] = [];
   let isSyncCompleted = false;
-  let stopTime = latestSyncTime;
+  let stopTime = window.moment.unix(latestSyncTime).startOf("day").unix();
 
   try {
     while (!isSyncCompleted) {
