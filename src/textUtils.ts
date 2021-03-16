@@ -54,7 +54,7 @@ export async function updateSection(
       logbookSectionLineNum = i;
     } else if (logbookSectionLineNum !== -1) {
       const currLevel = getHeadingLevel(fileLines[i]);
-      if (currLevel && currLevel < headingLevel) {
+      if (currLevel && currLevel <= headingLevel) {
         nextSectionLineNum = i;
         break;
       }
@@ -66,10 +66,10 @@ export async function updateSection(
     const from = { line: logbookSectionLineNum, ch: 0 };
     const to =
       nextSectionLineNum !== -1
-        ? { line: nextSectionLineNum, ch: 0 }
+        ? { line: nextSectionLineNum - 1, ch: 0 }
         : { line: fileLines.length, ch: 0 };
 
-    editor.replaceRange(sectionContents, from, to);
+    editor.replaceRange(`${sectionContents}\n`, from, to);
     return;
   }
 
