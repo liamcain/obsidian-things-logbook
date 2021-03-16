@@ -1,6 +1,7 @@
 import resolve from "@rollup/plugin-node-resolve";
 import commonjs from "@rollup/plugin-commonjs";
 import typescript from "@rollup/plugin-typescript";
+import webWorkerLoader from "rollup-plugin-web-worker-loader";
 import { env } from "process";
 
 export default {
@@ -16,6 +17,7 @@ export default {
     resolve({
       browser: true,
     }),
+    webWorkerLoader({ targetPlatform: "browser", preserveSource: true }),
     commonjs(),
   ],
 };

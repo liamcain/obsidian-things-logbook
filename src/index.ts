@@ -20,7 +20,7 @@ import {
   getTasksFromThingsLogbook,
   ITask,
 } from "./things";
-import { groupBy, isMacOS, updateSection } from "./utils";
+import { groupBy, isMacOS, updateSection } from "./textUtils";
 
 declare global {
   interface Window {
@@ -144,6 +144,7 @@ export default class ThingsLogbookPlugin extends Plugin {
       }
 
       await updateSection(
+        this.app,
         dailyNote,
         "## Logbook",
         logbookRenderer.render(tasks)
