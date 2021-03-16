@@ -1,5 +1,5 @@
-import * as os from "os";
-import type { TFile } from "obsidian";
+import type { App, TFile } from "obsidian";
+import { getEditorForFile } from "./fileUtils";
 
 export function getHeadingLevel(line = ""): number | null {
   const heading = line.match(/^(#{1,6})\s\b/);
@@ -31,10 +31,11 @@ export function groupBy<T>(
 }
 
 export function isMacOS(): boolean {
-  return os.platform() === "darwin";
+  return navigator.appVersion.indexOf("Mac") !== -1;
 }
 
 export async function updateSection(
+  app: App,
   file: TFile,
   heading: string,
   sectionContents: string
@@ -53,15 +54,28 @@ export async function updateSection(
       logbookSectionLineNum = i;
     } else if (logbookSectionLineNum !== -1) {
       const currLevel = getHeadingLevel(fileLines[i]);
-      if (currLevel && currLevel < headingLevel) {
+      if (currLevel && currLevel <= headingLevel) {
         nextSectionLineNum = i;
         break;
       }
     }
   }
 
-  // Section already exists, just replace
+  const editor = getEditorForFile(app, file);
+  if (editor) {
+    const from = { line: logbookSectionLineNum, ch: 0 };
+    const to =
+      nextSectionLineNum !== -1
+        ? { line: nextSectionLineNum - 1, ch: 0 }
+        : { line: fileLines.length, ch: 0 };
+
+    editor.replaceRange(`${sectionContents}\n`, from, to);
+    return;
+  }
+
+  // Editor is not open, modify the file on disk...
   if (logbookSectionLineNum !== -1) {
+    // Section already exists, just replace
     const prefix = fileLines.slice(0, logbookSectionLineNum);
     const suffix =
       nextSectionLineNum !== -1 ? fileLines.slice(nextSectionLineNum) : [];
@@ -71,6 +85,7 @@ export async function updateSection(
       [...prefix, sectionContents, ...suffix].join("\n")
     );
   } else {
+    // Section does not exist, append to end of file.
     return vault.modify(file, [...fileLines, "", sectionContents].join("\n"));
   }
 }

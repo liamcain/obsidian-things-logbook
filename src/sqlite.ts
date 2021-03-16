@@ -26,13 +26,11 @@ async function handleSqliteQuery(
     const stdOut: Buffer[] = [];
     const stdErr: Buffer[] = [];
 
-    const spawned = spawn("sqlite3", [
-      dbPath,
-      "-header",
-      "-csv",
-      "-readonly",
-      query,
-    ]);
+    const spawned = spawn(
+      "sqlite3",
+      [dbPath, "-header", "-csv", "-readonly", query],
+      { detached: true }
+    );
 
     spawned.stdout.on("data", (buffer: Buffer) => {
       stdOut.push(buffer);
