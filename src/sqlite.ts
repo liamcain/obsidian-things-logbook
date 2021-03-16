@@ -1,6 +1,5 @@
+import { spawn } from "child_process";
 import Papa from "papaparse";
-
-import SqliteWorker from "web-worker:./SqliteWorker.ts";
 
 export const TASK_FETCH_LIMIT = 1000;
 
@@ -24,11 +23,27 @@ async function handleSqliteQuery(
   query: string
 ): Promise<ISpawnResults> {
   return new Promise((done) => {
-    const worker = new SqliteWorker();
-    worker.postMessage([dbPath, query]);
-    worker.onmessage = (e: MessageEvent) => {
-      done(e.data);
-    };
+    const stdOut: Buffer[] = [];
+    const stdErr: Buffer[] = [];
+
+    const spawned = spawn(
+      "sqlite3",
+      [dbPath, "-header", "-csv", "-readonly", query],
+      { detached: true }
+    );
+
+    spawned.stdout.on("data", (buffer: Buffer) => {
+      stdOut.push(buffer);
+    });
+    spawned.stderr.on("data", (buffer: Buffer) => {
+      stdErr.push(buffer);
+    });
+
+    spawned.on("error", (err: Error) => {
+      stdErr.push(Buffer.from(String(err.stack), "ascii"));
+    });
+    spawned.on("close", (code: number) => done({ stdErr, stdOut, code }));
+    spawned.on("exit", (code: number) => done({ stdErr, stdOut, code }));
   });
 }
 

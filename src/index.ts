@@ -130,26 +130,26 @@ export default class ThingsLogbookPlugin extends Plugin {
       checklistRecords
     );
 
-    const daysToTasks: Record<string, ITask[]> = groupBy(
-      tasks.filter((task) => task.stopDate),
-      (task) => window.moment.unix(task.stopDate).startOf("day").format()
-    );
+    // const daysToTasks: Record<string, ITask[]> = groupBy(
+    //   tasks.filter((task) => task.stopDate),
+    //   (task) => window.moment.unix(task.stopDate).startOf("day").format()
+    // );
 
-    for (const [dateStr, tasks] of Object.entries(daysToTasks)) {
-      const date = window.moment(dateStr);
+    // for (const [dateStr, tasks] of Object.entries(daysToTasks)) {
+    //   const date = window.moment(dateStr);
 
-      let dailyNote = getDailyNote(date, dailyNotes);
-      if (!dailyNote) {
-        dailyNote = await createDailyNote(date);
-      }
+    //   let dailyNote = getDailyNote(date, dailyNotes);
+    //   if (!dailyNote) {
+    //     dailyNote = await createDailyNote(date);
+    //   }
 
-      await updateSection(
-        this.app,
-        dailyNote,
-        "## Logbook",
-        logbookRenderer.render(tasks)
-      );
-    }
+    //   await updateSection(
+    //     this.app,
+    //     dailyNote,
+    //     "## Logbook",
+    //     logbookRenderer.render(tasks)
+    //   );
+    // }
 
     new Notice("Things Logbook sync complete");
     this.writeOptions({ latestSyncTime: window.moment().unix() });

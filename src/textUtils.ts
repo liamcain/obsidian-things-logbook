@@ -69,7 +69,7 @@ export async function updateSection(
         ? { line: nextSectionLineNum, ch: 0 }
         : { line: fileLines.length, ch: 0 };
 
-    console.log("replacing from", from, "to ", to);
+    // console.log("replacing from", from, "to ", to);
     editor.replaceRange(sectionContents, from, to);
     return;
   }

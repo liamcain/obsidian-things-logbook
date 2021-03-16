@@ -10,7 +10,7 @@
     "noImplicitAny": true,
     "moduleResolution": "node",
     "importHelpers": true,
-    "lib": ["dom", "esnext", "webworker"]
+    "lib": ["dom", "esnext"]
   },
   "include": ["**/*.ts"]
 }
