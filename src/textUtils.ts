@@ -63,14 +63,22 @@ export async function updateSection(
 
   const editor = getEditorForFile(app, file);
   if (editor) {
-    const from = { line: logbookSectionLineNum, ch: 0 };
-    const to =
-      nextSectionLineNum !== -1
-        ? { line: nextSectionLineNum - 1, ch: 0 }
-        : { line: fileLines.length, ch: 0 };
-
-    editor.replaceRange(`${sectionContents}\n`, from, to);
-    return;
+    // if the "## Logbook" header exists, we just replace the
+    // section. If it doesn't, we need to append it to the end
+    // if the file and add `\n` for separation.
+    if (logbookSectionLineNum !== -1) {
+      const from = { line: logbookSectionLineNum, ch: 0 };
+      const to =
+        nextSectionLineNum !== -1
+          ? { line: nextSectionLineNum - 1, ch: 0 }
+          : { line: fileLines.length, ch: 0 };
+      editor.replaceRange(`${sectionContents}\n`, from, to);
+      return;
+    } else {
+      const pos = { line: fileLines.length, ch: 0 };
+      editor.replaceRange(`\n\n${sectionContents}`, pos, pos);
+      return;
+    }
   }
 
   // Editor is not open, modify the file on disk...
