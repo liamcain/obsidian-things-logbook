@@ -2,7 +2,7 @@
   "id": "things-logbook",
   "name": "Things Logbook",
   "description": "Sync your Things.app Logbook with Daily Notes",
-  "version": "0.1.7",
+  "version": "0.1.8",
   "author": "Liam Cain",
   "authorUrl": "https://github.com/liamcain/",
   "isDesktopOnly": true,
