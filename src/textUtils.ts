@@ -2,7 +2,7 @@ import type { App, TFile } from "obsidian";
 import { getEditorForFile } from "./fileUtils";
 
 export function getHeadingLevel(line = ""): number | null {
-  const heading = line.match(/^(#{1,6})\s\b/);
+  const heading = line.match(/^(#{1,6})\s+\S/);
   return heading ? heading[1].length : null;
 }
 
