@@ -27,7 +27,7 @@ export class LogbookRenderer {
 
     return [
       `- [x] ${task.title} ${tags}`.trimEnd(),
-      ...(task.notes || "")
+      ...String(task.notes || "")
         .trimEnd()
         .split("\n")
         .filter((line) => !!line)
