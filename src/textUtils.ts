@@ -42,7 +42,7 @@ export async function updateSection(
 ): Promise<void> {
   const headingLevel = getHeadingLevel(heading);
 
-  const { vault } = window.app;
+  const { vault } = app;
   const fileContents = await vault.read(file);
   const fileLines = fileContents.split("\n");
 
@@ -50,7 +50,7 @@ export async function updateSection(
   let nextSectionLineNum = -1;
 
   for (let i = 0; i < fileLines.length; i++) {
-    if (fileLines[i] === heading) {
+    if (fileLines[i].trim() === heading) {
       logbookSectionLineNum = i;
     } else if (logbookSectionLineNum !== -1) {
       const currLevel = getHeadingLevel(fileLines[i]);

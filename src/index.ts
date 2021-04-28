@@ -1,12 +1,12 @@
 import type moment from "moment";
-import { App, Notice, Plugin } from "obsidian";
+import { Notice, Plugin } from "obsidian";
 import {
   createDailyNote,
   getDailyNote,
   getAllDailyNotes,
 } from "obsidian-daily-notes-interface";
 
-import { createConfirmationDialog } from "./modal";
+import { ConfirmationModal } from "./modal";
 import { LogbookRenderer } from "./renderer";
 import {
   DEFAULT_SETTINGS,
@@ -24,7 +24,6 @@ import { groupBy, isMacOS, updateSection } from "./textUtils";
 
 declare global {
   interface Window {
-    app: App;
     moment: typeof moment;
   }
 }
@@ -73,7 +72,7 @@ export default class ThingsLogbookPlugin extends Plugin {
     if (this.options.hasAcceptedDisclaimer) {
       this.syncLogbook();
     } else {
-      createConfirmationDialog({
+      new ConfirmationModal(this.app, {
         cta: "Sync",
         onAccept: async () => {
           await this.writeOptions({ hasAcceptedDisclaimer: true });
@@ -82,7 +81,7 @@ export default class ThingsLogbookPlugin extends Plugin {
         text:
           "Enabling sync will backfill your entire Things Logbook into Obsidian. This means potentially creating or modifying hundreds of notes. Make sure to test the plugin in a test vault before continuing.",
         title: "Sync Now?",
-      });
+      }).open();
     }
   }
 
@@ -90,7 +89,7 @@ export default class ThingsLogbookPlugin extends Plugin {
     if (this.options.hasAcceptedDisclaimer) {
       this.scheduleNextSync();
     } else {
-      createConfirmationDialog({
+      new ConfirmationModal(this.app, {
         cta: "Sync",
         onAccept: async () => {
           await this.writeOptions({ hasAcceptedDisclaimer: true });
@@ -104,7 +103,7 @@ export default class ThingsLogbookPlugin extends Plugin {
         text:
           "Enabling sync will backfill your entire Things Logbook into Obsidian. This means potentially creating or modifying hundreds of notes. Make sure to test the plugin in a test vault before continuing.",
         title: "Sync Now?",
-      });
+      }).open();
     }
   }
 
