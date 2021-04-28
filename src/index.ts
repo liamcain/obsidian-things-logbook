@@ -145,7 +145,7 @@ export default class ThingsLogbookPlugin extends Plugin {
       await updateSection(
         this.app,
         dailyNote,
-        "## Logbook",
+        this.options.sectionHeading,
         logbookRenderer.render(tasks)
       );
     }
