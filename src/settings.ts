@@ -58,7 +58,8 @@ export class ThingsLogbookSettingsTab extends PluginSettingTab {
       )
       .addText((textfield) => {
         textfield.setValue(this.plugin.options.sectionHeading);
-        textfield.onChange(async (sectionHeading) => {
+        textfield.onChange(async (rawSectionHeading) => {
+          const sectionHeading = rawSectionHeading.trim();
           this.plugin.writeOptions({ sectionHeading });
         });
       });

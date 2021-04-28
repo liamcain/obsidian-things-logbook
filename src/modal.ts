@@ -44,22 +44,3 @@ export class ConfirmationModal extends Modal {
     }
   }
 }
-
-export function createConfirmationDialog({
-  cta,
-  onAccept,
-  onCancel,
-  text,
-  title,
-}: IConfirmationDialogParams): ConfirmationModal {
-  const modal = new ConfirmationModal(window.app, {
-    cta,
-    onAccept,
-    onCancel,
-    text,
-    title,
-  });
-  modal.open();
-
-  return modal;
-}

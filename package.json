@@ -14,9 +14,9 @@
   },
   "dependencies": {
     "obsidian": "obsidianmd/obsidian-api#master",
-    "obsidian-daily-notes-interface": "0.7.7",
+    "obsidian-daily-notes-interface": "0.9.2",
     "papaparse": "5.3.0",
-    "tslib": "2.1.0"
+    "tslib": "2.2.0"
   },
   "devDependencies": {
     "@rollup/plugin-commonjs": "17.1.0",
@@ -26,7 +26,6 @@
     "@rollup/plugin-typescript": "8.2.0",
     "@types/jest": "26.0.20",
     "@types/moment": "2.13.0",
-    "@types/node": "14.14.34",
     "@types/papaparse": "5.2.5",
     "@typescript-eslint/eslint-plugin": "4.17.0",
     "@typescript-eslint/parser": "4.17.0",
