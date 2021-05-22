@@ -15,6 +15,7 @@ function parseCSV<T>(csv: Buffer[]): T[] {
     dynamicTyping: true,
     header: true,
     newline: "\n",
+    skipEmptyLines: true,
   }).data;
 }
 
