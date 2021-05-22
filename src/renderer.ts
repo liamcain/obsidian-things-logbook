@@ -25,8 +25,10 @@ export class LogbookRenderer {
       .map((tag) => `#${prefix}${tag}`)
       .join(" ");
 
+    const taskTitle = `[${task.title}](things:///show?id=${task.uuid}) ${tags}`.trimEnd()
+
     return [
-      `- [x] ${task.title} ${tags}`.trimEnd(),
+      `- [x] ${taskTitle}`,
       ...String(task.notes || "")
         .trimEnd()
         .split("\n")
