@@ -50,11 +50,13 @@ export function buildTasksFromSQLRecords(
   const tasks: Record<string, ITask> = {};
   taskRecords.forEach(({ tag, ...task }) => {
     const id = task.uuid;
+
     if (tasks[id]) {
       tasks[id].tags.push(tag);
     } else {
       tasks[id] = {
         ...task,
+        title: task.title.trimEnd(),
         subtasks: [],
         tags: [tag],
       };
@@ -65,7 +67,7 @@ export function buildTasksFromSQLRecords(
     const task = tasks[taskId];
     const subtask = {
       completed: !!stopDate,
-      title,
+      title: title.trimEnd(),
     };
 
     // checklist item might be completed before task
@@ -100,7 +102,7 @@ async function getTasksFromThingsDb(
         ON TMTaskTag.tasks = TMTask.uuid
     LEFT JOIN TMTag
         ON TMTag.uuid = TMTaskTag.tags
-    LEFT JOIN TMArea 
+    LEFT JOIN TMArea
         ON TMTask.area = TMArea.uuid
     WHERE
         TMTask.trashed = 0
@@ -126,6 +128,7 @@ async function getChecklistItemsThingsDb(
         TMChecklistItem
     WHERE
         stopDate > ${latestSyncTime}
+        AND title IS NOT ""
     ORDER BY
         stopDate
     LIMIT ${TASK_FETCH_LIMIT}
