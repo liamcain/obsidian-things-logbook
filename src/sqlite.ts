@@ -12,7 +12,7 @@ interface ISpawnResults {
 function parseCSV<T>(csv: Buffer[]): T[] {
   const lines = Buffer.concat(csv).toString("utf-8");
   return Papa.parse<T>(lines, {
-    dynamicTyping: true,
+    dynamicTyping: false,
     header: true,
     newline: "\n",
     skipEmptyLines: true,
