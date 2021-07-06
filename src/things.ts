@@ -23,7 +23,7 @@ export interface ITask {
 
 export interface ITaskRecord {
   uuid: string;
-  title: string;
+  title?: string;
   notes: string;
   area?: string;
   startDate: number;
@@ -56,7 +56,7 @@ export function buildTasksFromSQLRecords(
     } else {
       tasks[id] = {
         ...task,
-        title: task.title.trimEnd(),
+        title: (task.title || "").trimEnd(),
         subtasks: [],
         tags: [tag],
       };
