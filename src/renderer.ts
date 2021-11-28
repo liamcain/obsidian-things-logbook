@@ -33,7 +33,7 @@ export class LogbookRenderer {
         .trimEnd()
         .split("\n")
         .filter((line) => !!line)
-        .map((noteLine) => `${tab}- ${noteLine}`),
+        .map((noteLine) => `${tab}${noteLine}`),
       ...task.subtasks.map(
         (subtask: ISubTask) =>
           `${tab}- [${subtask.completed ? "x" : " "}] ${subtask.title}`
