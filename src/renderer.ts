@@ -28,7 +28,7 @@ export class LogbookRenderer {
     const taskTitle = `[${task.title}](things:///show?id=${task.uuid}) ${tags}`.trimEnd()
 
     return [
-      `- [${task.cancelled ? 'c' : 'x'}] ${taskTitle}`,
+      `- [${task.cancelled ? this.settings.canceledMark : 'x'}] ${taskTitle}`,
       ...String(task.notes || "")
         .trimEnd()
         .split("\n")
