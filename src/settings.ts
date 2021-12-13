@@ -5,6 +5,7 @@ import type ThingsLogbookPlugin from "./index";
 export const DEFAULT_SECTION_HEADING = "## Logbook";
 export const DEFAULT_SYNC_FREQUENCY_SECONDS = 30 * 60; // Every 30 minutes
 export const DEFAULT_TAG_PREFIX = "logbook/";
+export const DEFAULT_CANCELLED_MARK = "c";
 
 export interface ISettings {
   hasAcceptedDisclaimer: boolean;
@@ -14,6 +15,7 @@ export interface ISettings {
   sectionHeading: string;
   syncInterval: number;
   tagPrefix: string;
+  canceledMark: string;
 }
 
 export const DEFAULT_SETTINGS = Object.freeze({
@@ -24,6 +26,7 @@ export const DEFAULT_SETTINGS = Object.freeze({
   syncInterval: DEFAULT_SYNC_FREQUENCY_SECONDS,
   sectionHeading: DEFAULT_SECTION_HEADING,
   tagPrefix: DEFAULT_TAG_PREFIX,
+  canceledMark: DEFAULT_CANCELLED_MARK
 });
 
 export class ThingsLogbookSettingsTab extends PluginSettingTab {
@@ -42,6 +45,7 @@ export class ThingsLogbookSettingsTab extends PluginSettingTab {
     });
     this.addSectionHeadingSetting();
     this.addTagPrefixSetting();
+    this.addCanceledMarkSetting();
 
     this.containerEl.createEl("h3", {
       text: "Sync",
@@ -103,5 +107,18 @@ export class ThingsLogbookSettingsTab extends PluginSettingTab {
           this.plugin.writeOptions({ tagPrefix });
         });
       });
+  }
+  addCanceledMarkSetting(): void {
+    new Setting(this.containerEl)
+        .setName("Canceled Mark")
+        .setDesc(
+            "Mark character to use for canceled tasks"
+        )
+        .addText((textfield) => {
+          textfield.setValue(this.plugin.options.canceledMark);
+          textfield.onChange(async (canceledMark) => {
+            this.plugin.writeOptions({ canceledMark });
+          });
+        });
   }
 }

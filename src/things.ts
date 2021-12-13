@@ -18,6 +18,7 @@ export interface ITask {
   tags: string[];
   startDate: number;
   stopDate: number;
+  cancelled: boolean;
   subtasks: ISubTask[];
 }
 
@@ -28,6 +29,7 @@ export interface ITaskRecord {
   area?: string;
   startDate: number;
   stopDate: number;
+  status: string;
   tag?: string;
 }
 
@@ -43,6 +45,9 @@ const thingsSqlitePath = THINGS_DB_PATH.replace("~", os.homedir());
 
 export class ThingsSQLiteSyncError extends Error {}
 
+
+const STATUS_CANCELLED = 2;
+
 export function buildTasksFromSQLRecords(
   taskRecords: ITaskRecord[],
   checklistRecords: IChecklistItemRecord[]
@@ -50,13 +55,15 @@ export function buildTasksFromSQLRecords(
   const tasks: Record<string, ITask> = {};
   taskRecords.forEach(({ tag, ...task }) => {
     const id = task.uuid;
+    const { status, title, ...other } = task;
 
     if (tasks[id]) {
       tasks[id].tags.push(tag);
     } else {
       tasks[id] = {
-        ...task,
-        title: (task.title || "").trimEnd(),
+        ...other,
+        cancelled: STATUS_CANCELLED === Number.parseInt(status),
+        title: (title || "").trimEnd(),
         subtasks: [],
         tags: [tag],
       };
@@ -94,6 +101,7 @@ async function getTasksFromThingsDb(
         TMTask.notes as notes,
         TMTask.startDate as startDate,
         TMTask.stopDate as stopDate,
+        TMTask.status as status,
         TMArea.title as area,
         TMTag.title as tag
     FROM
