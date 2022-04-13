@@ -54,7 +54,7 @@ export class ThingsLogbookSettingsTab extends PluginSettingTab {
     });
     this.addSyncEnabledSetting();
     this.addSyncIntervalSetting();
-    this.addDoesSyncToeBody();
+    this.addDoesSyncNoteBodySetting();
   }
 
   addSectionHeadingSetting(): void {
@@ -83,9 +83,10 @@ export class ThingsLogbookSettingsTab extends PluginSettingTab {
       });
   }
 
-  addDoesSyncToeBody() {
+  addDoesSyncNoteBodySetting() {
     new Setting(this.containerEl)
-      .setName("Sync note's body")
+      .setName("Include notes")
+      .setDesc('Includes MD notes of a task into the synced Obsidian document')
       .addToggle((toggle) => {
         toggle.setValue(this.plugin.options.doesSyncNoteBody);
         toggle.onChange(async (doesSyncNoteBody) => {

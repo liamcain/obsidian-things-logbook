@@ -130,7 +130,7 @@ export default class ThingsLogbookPlugin extends Plugin {
     );
 
     const daysToTasks: Record<string, ITask[]> = groupBy(
-      tasks.filter((task) => task.stopDate).map((task) => task),
+      tasks.filter((task) => task.stopDate),
       (task) => window.moment.unix(task.stopDate).startOf("day").format()
     );
 
