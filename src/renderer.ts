@@ -27,13 +27,17 @@ export class LogbookRenderer {
 
     const taskTitle = `[${task.title}](things:///show?id=${task.uuid}) ${tags}`.trimEnd()
 
-    return [
-      `- [${task.cancelled ? this.settings.canceledMark : 'x'}] ${taskTitle}`,
-      ...String(task.notes || "")
+    const notes = this.settings.doesSyncNoteBody
+      ? String(task.notes || "")
         .trimEnd()
         .split("\n")
         .filter((line) => !!line)
-        .map((noteLine) => `${tab}${noteLine}`),
+        .map((noteLine) => `${tab}${noteLine}`)
+      : ""
+
+    return [
+      `- [${task.cancelled ? this.settings.canceledMark : 'x'}] ${taskTitle}`,
+      ...notes,
       ...task.subtasks.map(
         (subtask: ISubTask) =>
           `${tab}- [${subtask.completed ? "x" : " "}] ${subtask.title}`
