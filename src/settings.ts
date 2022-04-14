@@ -11,6 +11,7 @@ export interface ISettings {
   hasAcceptedDisclaimer: boolean;
   latestSyncTime: number;
 
+  doesSyncNoteBody: boolean;
   isSyncEnabled: boolean;
   sectionHeading: string;
   syncInterval: number;
@@ -22,6 +23,7 @@ export const DEFAULT_SETTINGS = Object.freeze({
   hasAcceptedDisclaimer: false,
   latestSyncTime: 0,
 
+  doesSyncNoteBody: true,
   isSyncEnabled: false,
   syncInterval: DEFAULT_SYNC_FREQUENCY_SECONDS,
   sectionHeading: DEFAULT_SECTION_HEADING,
@@ -52,6 +54,7 @@ export class ThingsLogbookSettingsTab extends PluginSettingTab {
     });
     this.addSyncEnabledSetting();
     this.addSyncIntervalSetting();
+    this.addDoesSyncNoteBodySetting();
   }
 
   addSectionHeadingSetting(): void {
@@ -76,6 +79,18 @@ export class ThingsLogbookSettingsTab extends PluginSettingTab {
         toggle.setValue(this.plugin.options.isSyncEnabled);
         toggle.onChange(async (isSyncEnabled) => {
           this.plugin.writeOptions({ isSyncEnabled });
+        });
+      });
+  }
+
+  addDoesSyncNoteBodySetting() {
+    new Setting(this.containerEl)
+      .setName("Include notes")
+      .setDesc('Includes MD notes of a task into the synced Obsidian document')
+      .addToggle((toggle) => {
+        toggle.setValue(this.plugin.options.doesSyncNoteBody);
+        toggle.onChange(async (doesSyncNoteBody) => {
+          this.plugin.writeOptions({ doesSyncNoteBody })
         });
       });
   }
