@@ -11,6 +11,7 @@ export interface ISettings {
   hasAcceptedDisclaimer: boolean;
   latestSyncTime: number;
 
+  doesSyncProject: boolean;
   doesSyncNoteBody: boolean;
   isSyncEnabled: boolean;
   sectionHeading: string;
@@ -23,6 +24,7 @@ export const DEFAULT_SETTINGS = Object.freeze({
   hasAcceptedDisclaimer: false,
   latestSyncTime: 0,
 
+  doesSyncProject: false,
   doesSyncNoteBody: true,
   isSyncEnabled: false,
   syncInterval: DEFAULT_SYNC_FREQUENCY_SECONDS,
@@ -55,6 +57,7 @@ export class ThingsLogbookSettingsTab extends PluginSettingTab {
     this.addSyncEnabledSetting();
     this.addSyncIntervalSetting();
     this.addDoesSyncNoteBodySetting();
+    this.addDoesSyncProjectSetting();
   }
 
   addSectionHeadingSetting(): void {
@@ -83,7 +86,7 @@ export class ThingsLogbookSettingsTab extends PluginSettingTab {
       });
   }
 
-  addDoesSyncNoteBodySetting() {
+  addDoesSyncNoteBodySetting(): void {
     new Setting(this.containerEl)
       .setName("Include notes")
       .setDesc('Includes MD notes of a task into the synced Obsidian document')
@@ -93,6 +96,18 @@ export class ThingsLogbookSettingsTab extends PluginSettingTab {
           this.plugin.writeOptions({ doesSyncNoteBody })
         });
       });
+  }
+
+  addDoesSyncProjectSetting(): void {
+    new Setting(this.containerEl)
+        .setName("Include project")
+        .setDesc("If the Things task belongs to a project, use project name as header instead of area")
+        .addToggle((toggle) => {
+          toggle.setValue(this.plugin.options.doesSyncProject);
+          toggle.onChange(async (doesSyncProject) => {
+            this.plugin.writeOptions({ doesSyncProject })
+          });
+        });
   }
 
   addSyncIntervalSetting(): void {
@@ -123,6 +138,7 @@ export class ThingsLogbookSettingsTab extends PluginSettingTab {
         });
       });
   }
+
   addCanceledMarkSetting(): void {
     new Setting(this.containerEl)
         .setName("Canceled Mark")
