@@ -44,7 +44,7 @@ export interface IChecklistItemRecord {
 
 const baseDir = THINGS_DB_PATH_START.replace("~", os.homedir());
 const dataPath = fs.readdirSync(baseDir).filter((file) => file.startsWith("ThingsData"))[0];
-const thingsSqlitePath = baseDir + "/" + dataPath + "/" + THINGS_DB_PATH_END;
+const thingsSqlitePath = path.join(baseDir, dataPath, THINGS_DB_PATH_END);
 
 export class ThingsSQLiteSyncError extends Error {}
 
