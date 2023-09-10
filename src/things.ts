@@ -1,5 +1,6 @@
 import * as os from "os";
 import * as fs from "fs";
+import * as path from "path";
 
 import { THINGS_DB_PATH_START, THINGS_DB_PATH_END } from "./constants";
 import { querySqliteDB } from "./sqlite";
