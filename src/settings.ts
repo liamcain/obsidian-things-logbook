@@ -1,4 +1,4 @@
-import { App, PluginSettingTab, Setting } from "obsidian";
+import { App, PluginSettingTab, Setting, moment } from "obsidian";
 
 import type ThingsLogbookPlugin from "./index";
 
@@ -45,6 +45,8 @@ export class ThingsLogbookSettingsTab extends PluginSettingTab {
 
   display(): void {
     this.containerEl.empty();
+
+    this.addResetLastSyncSetting();
 
     this.containerEl.createEl("h3", {
       text: "Format Settings",
@@ -165,6 +167,40 @@ export class ThingsLogbookSettingsTab extends PluginSettingTab {
           toggle.onChange(async (doesAddNewlineBeforeHeadings) => {
             this.plugin.writeOptions({ doesAddNewlineBeforeHeadings });
           });
+        });
+  }
+
+  addResetLastSyncSetting(): void {
+    const { latestSyncTime } = this.plugin.options;
+    const syncTime = latestSyncTime > 0 
+      ? moment.unix(this.plugin.options.latestSyncTime).fromNow()
+      : 'Never';
+
+    new Setting(this.containerEl)
+        .setDesc(createFragment(el => {
+          el.appendText('Last sync: ');
+          el.createSpan({ cls: 'u-pop', text: syncTime });
+        }))
+        .addButton(button => {
+          button.setButtonText('Sync now');
+          button.setClass('mod-cta');
+          button.onClick(async () => {
+            button.setDisabled(true);
+            await this.plugin.syncLogbook();
+            this.display();
+          });
+        })
+        .addButton(button => {
+          button.setButtonText('Reset sync history');
+          button.setClass('mod-danger');
+          button.onClick(async () => {
+            await this.plugin.writeOptions({ latestSyncTime: 0 });
+            this.display();
+          });
+        })
+        .addExtraButton(component => {
+          component.setIcon('lucide-info');
+          component.setTooltip('Reseting the sync history will cause Things Logbook to rewrite rewrite the Logbook to all existing daily notes.');
         });
   }
 }
