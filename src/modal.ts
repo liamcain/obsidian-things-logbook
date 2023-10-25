@@ -11,6 +11,7 @@ interface IConfirmationDialogParams {
 export class ConfirmationModal extends Modal {
   private config: IConfirmationDialogParams;
   private accepted: boolean;
+  private buttonContainerEl: HTMLElement;
 
   constructor(app: App, config: IConfirmationDialogParams) {
     super(app);
@@ -18,23 +19,27 @@ export class ConfirmationModal extends Modal {
 
     const { cta, onAccept, text, title } = config;
 
-    this.contentEl.createEl("h2", { text: title });
-    this.contentEl.createEl("p", { text });
-    this.contentEl
-      .createEl("button", { text: "Never mind" })
-      .addEventListener("click", () => {
-        this.close();
-      });
+		this.containerEl.addClass('mod-confirmation');
+    this.titleEl.setText(title);
+    this.contentEl.setText(text);
 
-    this.contentEl
-      .createEl("button", {
-        cls: "mod-cta",
-        text: cta,
-      })
-      .addEventListener("click", async (e) => {
-        this.accepted = true;
+		this.buttonContainerEl = this.modalEl.createDiv('modal-button-container');
+
+    const acceptBtnEl = this.buttonContainerEl.createEl("button", {
+      cls: "mod-cta",
+      text: cta,
+    });
+    acceptBtnEl.addEventListener("click", async (e) => {
+      e.preventDefault();
+      this.accepted = true;
+      this.close();
+      onAccept(e);
+    });
+
+    const cancelBtnEl = this.buttonContainerEl.createEl("button", { text: "Never mind" });
+    cancelBtnEl.addEventListener("click", e => {
+        e.preventDefault();
         this.close();
-        setTimeout(() => onAccept(e), 20);
       });
   }
 
