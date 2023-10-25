@@ -45,8 +45,10 @@ export interface IChecklistItemRecord {
   stopDate: number;
 }
 
+// Info on how to find the Things db file here:
+// https://culturedcode.com/things/support/articles/2982272/
 const baseDir = THINGS_DB_PATH_START.replace("~", os.homedir());
-const dataPath = fs.readdirSync(baseDir).filter((file) => file.startsWith("ThingsData"))[0];
+const dataPath = fs.readdirSync(baseDir).find((file) => file.startsWith("ThingsData")) ?? '';
 const thingsSqlitePath = path.join(baseDir, dataPath, THINGS_DB_PATH_END);
 
 export class ThingsSQLiteSyncError extends Error {}
