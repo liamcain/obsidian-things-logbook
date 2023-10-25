@@ -12,6 +12,8 @@ export interface ISettings {
   latestSyncTime: number;
 
   doesSyncNoteBody: boolean;
+  doesSyncProject: boolean;
+  doesAddNewlineBeforeHeadings: boolean;
   isSyncEnabled: boolean;
   sectionHeading: string;
   syncInterval: number;
@@ -24,6 +26,8 @@ export const DEFAULT_SETTINGS = Object.freeze({
   latestSyncTime: 0,
 
   doesSyncNoteBody: true,
+  doesSyncProject: false,
+  doesAddNewlineBeforeHeadings: false,
   isSyncEnabled: false,
   syncInterval: DEFAULT_SYNC_FREQUENCY_SECONDS,
   sectionHeading: DEFAULT_SECTION_HEADING,
@@ -48,6 +52,7 @@ export class ThingsLogbookSettingsTab extends PluginSettingTab {
     this.addSectionHeadingSetting();
     this.addTagPrefixSetting();
     this.addCanceledMarkSetting();
+    this.addDoesAddNewlineBeforeHeadingsSetting();
 
     this.containerEl.createEl("h3", {
       text: "Sync",
@@ -55,6 +60,7 @@ export class ThingsLogbookSettingsTab extends PluginSettingTab {
     this.addSyncEnabledSetting();
     this.addSyncIntervalSetting();
     this.addDoesSyncNoteBodySetting();
+    this.addDoesSyncProjectSetting();
   }
 
   addSectionHeadingSetting(): void {
@@ -83,7 +89,7 @@ export class ThingsLogbookSettingsTab extends PluginSettingTab {
       });
   }
 
-  addDoesSyncNoteBodySetting() {
+  addDoesSyncNoteBodySetting(): void {
     new Setting(this.containerEl)
       .setName("Include notes")
       .setDesc('Includes MD notes of a task into the synced Obsidian document')
@@ -93,6 +99,18 @@ export class ThingsLogbookSettingsTab extends PluginSettingTab {
           this.plugin.writeOptions({ doesSyncNoteBody })
         });
       });
+  }
+
+  addDoesSyncProjectSetting(): void {
+    new Setting(this.containerEl)
+        .setName("Include project")
+        .setDesc("If the Things task belongs to a project, use project name as header instead of area")
+        .addToggle((toggle) => {
+          toggle.setValue(this.plugin.options.doesSyncProject);
+          toggle.onChange(async (doesSyncProject) => {
+            this.plugin.writeOptions({ doesSyncProject })
+          });
+        });
   }
 
   addSyncIntervalSetting(): void {
@@ -123,6 +141,7 @@ export class ThingsLogbookSettingsTab extends PluginSettingTab {
         });
       });
   }
+
   addCanceledMarkSetting(): void {
     new Setting(this.containerEl)
         .setName("Canceled Mark")
@@ -133,6 +152,18 @@ export class ThingsLogbookSettingsTab extends PluginSettingTab {
           textfield.setValue(this.plugin.options.canceledMark);
           textfield.onChange(async (canceledMark) => {
             this.plugin.writeOptions({ canceledMark });
+          });
+        });
+  }
+
+  addDoesAddNewlineBeforeHeadingsSetting(): void {
+    new Setting(this.containerEl)
+        .setName("Empty line before headings")
+        .setDesc("When grouping tasks with headings by area or project, add an empty line before that heading")
+        .addToggle((toggle) => {
+          toggle.setValue(this.plugin.options.doesAddNewlineBeforeHeadings);
+          toggle.onChange(async (doesAddNewlineBeforeHeadings) => {
+            this.plugin.writeOptions({ doesAddNewlineBeforeHeadings });
           });
         });
   }

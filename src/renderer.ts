@@ -48,14 +48,14 @@ export class LogbookRenderer {
   }
 
   public render(tasks: ITask[]): string {
-    const { sectionHeading } = this.settings;
-    const areas = groupBy<ITask>(tasks, (task) => task.area || "");
+    const { sectionHeading, doesSyncProject, doesAddNewlineBeforeHeadings } = this.settings;
+    const headings = groupBy<ITask>(tasks, (task) => task.area || (doesSyncProject ? task.project : "") || "");
     const headingLevel = getHeadingLevel(sectionHeading);
 
     const output = [sectionHeading];
-    Object.entries(areas).map(([area, tasks]) => {
-      if (area !== "") {
-        output.push(toHeading(area, headingLevel + 1));
+    Object.entries(headings).map(([heading, tasks]) => {
+      if (heading !== "") {
+        output.push(toHeading(heading, headingLevel + 1, doesAddNewlineBeforeHeadings));
       }
       output.push(...tasks.map(this.renderTask));
     });

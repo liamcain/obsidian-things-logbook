@@ -17,6 +17,7 @@ export interface ITask {
   title: string;
   notes: string;
   area?: string;
+  project?: string;
   tags: string[];
   startDate: number;
   stopDate: number;
@@ -29,6 +30,7 @@ export interface ITaskRecord {
   title?: string;
   notes: string;
   area?: string;
+  project?: string;
   startDate: number;
   stopDate: number;
   status: string;
@@ -107,7 +109,8 @@ async function getTasksFromThingsDb(
         TMTask.stopDate as stopDate,
         TMTask.status as status,
         TMArea.title as area,
-        TMTag.title as tag
+        TMTag.title as tag,
+        TMProject.title as project
     FROM
         TMTask
     LEFT JOIN TMTaskTag
@@ -116,6 +119,8 @@ async function getTasksFromThingsDb(
         ON TMTag.uuid = TMTaskTag.tags
     LEFT JOIN TMArea
         ON TMTask.area = TMArea.uuid
+    LEFT JOIN TMTask TMProject
+        ON TMProject.uuid = TMTask.project
     WHERE
         TMTask.trashed = 0
         AND TMTask.stopDate IS NOT NULL
