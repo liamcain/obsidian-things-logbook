@@ -1,6 +1,8 @@
 import * as os from "os";
+import * as fs from "fs";
+import * as path from "path";
 
-import { THINGS_DB_PATH } from "./constants";
+import { THINGS_DB_PATH_START, THINGS_DB_PATH_END } from "./constants";
 import { querySqliteDB } from "./sqlite";
 
 export const TASK_FETCH_LIMIT = 1000;
@@ -41,7 +43,9 @@ export interface IChecklistItemRecord {
   stopDate: number;
 }
 
-const thingsSqlitePath = THINGS_DB_PATH.replace("~", os.homedir());
+const baseDir = THINGS_DB_PATH_START.replace("~", os.homedir());
+const dataPath = fs.readdirSync(baseDir).filter((file) => file.startsWith("ThingsData"))[0];
+const thingsSqlitePath = path.join(baseDir, dataPath, THINGS_DB_PATH_END);
 
 export class ThingsSQLiteSyncError extends Error {}
 
